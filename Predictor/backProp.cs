@@ -3271,7 +3271,7 @@ namespace Predictor
             {
                 for(int i = 0; i < 1400; i++)
                 {
-                    detempencoded_avg_error_mat[i] *= 10;
+                    detempencoded_avg_error_mat[i] *= 100;
                 }
             }
 

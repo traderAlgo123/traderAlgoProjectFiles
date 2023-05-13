@@ -95,7 +95,7 @@ namespace Predictor
                 Array.Copy(predictorGui.convStructs[0].convLayer5Output, 0, predictorGui.convStructs[0].convLayer5OutputNorm, 0, 1400);
                 for(int i = 0; i < 1400; i++)
                 {
-                    predictorGui.convStructs[0].convLayer5OutputNorm[i] *= 10;
+                    predictorGui.convStructs[0].convLayer5OutputNorm[i] *= 100;
                 }
             }
 
