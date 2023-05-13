@@ -1,0 +1,74 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29519.181
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Data_Scraper", "Trader_Algo\Data_Scraper.csproj", "{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D} = {969BD06D-D8C7-41CB-8F81-B6C30C18644D}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2CB280C0-62D8-4F45-9C3C-4D338A3A5373}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Predictor", "Predictor\Predictor.csproj", "{969BD06D-D8C7-41CB-8F81-B6C30C18644D}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpuAccAiNetLib", "gpuAccAiNetLib\gpuAccAiNetLib.vcxproj", "{5079B352-47FB-4EE1-AF05-0786CC6AF388}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|x64.Build.0 = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Debug|x86.Build.0 = Debug|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|x64.ActiveCfg = Release|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|x64.Build.0 = Release|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|x86.ActiveCfg = Release|Any CPU
+		{F474F9FF-15B1-43FE-9A4D-0F1400426C8E}.Release|x86.Build.0 = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|x64.Build.0 = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Debug|x86.Build.0 = Debug|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|x64.ActiveCfg = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|x64.Build.0 = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|x86.ActiveCfg = Release|Any CPU
+		{969BD06D-D8C7-41CB-8F81-B6C30C18644D}.Release|x86.Build.0 = Release|Any CPU
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Debug|x64.ActiveCfg = Debug|x64
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Debug|x64.Build.0 = Debug|x64
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Debug|x86.ActiveCfg = Debug|Win32
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Debug|x86.Build.0 = Debug|Win32
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Release|Any CPU.ActiveCfg = Release|Win32
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Release|x64.ActiveCfg = Release|x64
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Release|x64.Build.0 = Release|x64
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Release|x86.ActiveCfg = Release|Win32
+		{5079B352-47FB-4EE1-AF05-0786CC6AF388}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8B37B039-2BEB-4F2A-B2EC-8CA6FD429076}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
+EndGlobal
