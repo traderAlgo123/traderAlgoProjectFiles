@@ -142,7 +142,6 @@ namespace Predictor
             if (head == 1)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
                 CudaDeviceVariable<double> d_in1 = key_head1;
@@ -152,7 +151,7 @@ namespace Predictor
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
                 //kernel.Run(d_in1.DevicePointer, d_in1_T.DevicePointer, M, K);
-                kernel.RunAsync(stream, d_in1.DevicePointer, d_in1_T.DevicePointer, M, K);
+                kernel.Run(d_in1.DevicePointer, d_in1_T.DevicePointer, M, K);
 
                 key_head1 = d_in1_T;
 
@@ -174,7 +173,6 @@ namespace Predictor
             else if (head == 2)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
                 CudaDeviceVariable<double> d_in2 = key_head2;
@@ -183,7 +181,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in2.DevicePointer, d_in2_T.DevicePointer, M, K);
+                kernel.Run(d_in2.DevicePointer, d_in2_T.DevicePointer, M, K);
 
                 key_head2 = d_in2_T;
 
@@ -205,7 +203,6 @@ namespace Predictor
             else if (head == 3)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
                 CudaDeviceVariable<double> d_in3 = key_head3;
@@ -214,7 +211,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in3.DevicePointer, d_in3_T.DevicePointer, M, K);
+                kernel.Run(d_in3.DevicePointer, d_in3_T.DevicePointer, M, K);
 
                 key_head3 = d_in3_T;
 
@@ -244,7 +241,6 @@ namespace Predictor
                 int N = 5;
 
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 1
@@ -255,7 +251,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in1.DevicePointer, d_queryWeights.DevicePointer, d_queryMat.DevicePointer, M, K, N);
+                kernel.Run(d_in1.DevicePointer, d_queryWeights.DevicePointer, d_queryMat.DevicePointer, M, K, N);
 
                 query_head1 = d_queryMat;
 
@@ -294,7 +290,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in2.DevicePointer, d_keyWeights.DevicePointer, d_keyMat.DevicePointer, M, K, N);
+                kernel.Run(d_in2.DevicePointer, d_keyWeights.DevicePointer, d_keyMat.DevicePointer, M, K, N);
 
                 key_head1 = d_keyMat;
 
@@ -333,7 +329,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in3.DevicePointer, d_valueWeights.DevicePointer, d_valueMat.DevicePointer, M, K, N);
+                kernel.Run(d_in3.DevicePointer, d_valueWeights.DevicePointer, d_valueMat.DevicePointer, M, K, N);
 
                 value_head1 = d_valueMat;
 
@@ -378,7 +374,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_query.DevicePointer, d_key.DevicePointer, d_preliminary_attention_filter_head1.DevicePointer, M, K, N);
+                kernel.Run(d_query.DevicePointer, d_key.DevicePointer, d_preliminary_attention_filter_head1.DevicePointer, M, K, N);
 
                 attention_filter_head1 = d_preliminary_attention_filter_head1;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -409,7 +405,6 @@ namespace Predictor
                 int N = 5;
 
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 2
@@ -420,7 +415,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
+                kernel.Run( d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
 
                 query_head2 = d_queryMat2;
 
@@ -459,7 +454,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in2.DevicePointer, d_keyWeights2.DevicePointer, d_keyMat2.DevicePointer, M, K, N);
+                kernel.Run(d_in2.DevicePointer, d_keyWeights2.DevicePointer, d_keyMat2.DevicePointer, M, K, N);
 
                 key_head2 = d_keyMat2;
 
@@ -498,7 +493,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in3.DevicePointer, d_valueWeights2.DevicePointer, d_valueMat2.DevicePointer, M, K, N);
+                kernel.Run(d_in3.DevicePointer, d_valueWeights2.DevicePointer, d_valueMat2.DevicePointer, M, K, N);
 
                 value_head2 = d_valueMat2;
 
@@ -543,7 +538,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_query2.DevicePointer, d_key2.DevicePointer, d_preliminary_attention_filter_head2.DevicePointer, M, K, N);
+                kernel.Run(d_query2.DevicePointer, d_key2.DevicePointer, d_preliminary_attention_filter_head2.DevicePointer, M, K, N);
 
                 attention_filter_head2 = d_preliminary_attention_filter_head2;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -574,7 +569,6 @@ namespace Predictor
                 int N = 5;
 
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 3
@@ -585,7 +579,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in1.DevicePointer, d_queryWeights3.DevicePointer, d_queryMat3.DevicePointer, M, K, N);
+                kernel.Run(d_in1.DevicePointer, d_queryWeights3.DevicePointer, d_queryMat3.DevicePointer, M, K, N);
 
                 query_head3 = d_queryMat3;
 
@@ -624,7 +618,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in2.DevicePointer, d_keyWeights3.DevicePointer, d_keyMat3.DevicePointer, M, K, N);
+                kernel.Run(d_in2.DevicePointer, d_keyWeights3.DevicePointer, d_keyMat3.DevicePointer, M, K, N);
 
                 key_head3 = d_keyMat3;
 
@@ -663,7 +657,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_in3.DevicePointer, d_valueWeights3.DevicePointer, d_valueMat3.DevicePointer, M, K, N);
+                kernel.Run(d_in3.DevicePointer, d_valueWeights3.DevicePointer, d_valueMat3.DevicePointer, M, K, N);
 
                 value_head3 = d_valueMat3;
 
@@ -708,7 +702,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_query3.DevicePointer, d_key3.DevicePointer, d_preliminary_attention_filter_head3.DevicePointer, M, K, N);
+                kernel.Run(d_query3.DevicePointer, d_key3.DevicePointer, d_preliminary_attention_filter_head3.DevicePointer, M, K, N);
 
                 attention_filter_head3 = d_preliminary_attention_filter_head3;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -1169,7 +1163,6 @@ namespace Predictor
             if (headNum == 1)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 int M = 100;
@@ -1182,7 +1175,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_maskedSelfAttentionFilter1.DevicePointer, d_value1.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
+                kernel.Run(d_maskedSelfAttentionFilter1.DevicePointer, d_value1.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
                 filtered_value_head1 = d_filteredValMat;
 
@@ -1210,7 +1203,6 @@ namespace Predictor
             if (headNum == 2)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 int M = 100;
@@ -1223,7 +1215,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_maskedSelfAttentionFilter2.DevicePointer, d_value2.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
+                kernel.Run(d_maskedSelfAttentionFilter2.DevicePointer, d_value2.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
                 filtered_value_head2 = d_filteredValMat;
 
@@ -1246,7 +1238,6 @@ namespace Predictor
             if (headNum == 3)
             {
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-                ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 int M = 100;
@@ -1259,7 +1250,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.RunAsync(stream, d_maskedSelfAttentionFilter3.DevicePointer, d_value3.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
+                kernel.Run(d_maskedSelfAttentionFilter3.DevicePointer, d_value3.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
                 filtered_value_head3 = d_filteredValMat;
 
