@@ -604,30 +604,42 @@ namespace Data_Scraper
 
             try
             {
-                //This code fills up a queue so currently we don't want to do that until remote controller is fully functional.
-                //We need logic that checks if remote control display is actually being used, otherwise do not populate queue.
-                var webRequest = (HttpWebRequest)WebRequest.Create("http://" + ipaddress3 + "/datauploader");
-                webRequest.ContentType = "application/json";
-                webRequest.Method = "POST";
+                var execRequest = new HttpRequestMessage(HttpMethod.Get, "http://" + ipaddress3 + "/isrunning");
+                var task1 = Task.Run(() => pingClient.SendAsync(execRequest));
+                task1.Wait();
+                var response = task1.Result;
+                response.EnsureSuccessStatusCode();
 
-                string json = "{\"datalist\": [";
-                for (int i = 0; i < 32; i++)
-                {
-                    json += "{\"datavalue\": [\"" + tempTensor.vecTensor[i].vectorPrice.ToString() + "\",\"" + tempTensor.vecTensor[i].vectorSize.ToString() +
-                            "\"]},";
-                }
-                json = json.Remove(json.Length - 1, 1);
-                json += "]}";
+                var task2 = Task.Run(() => response.Content.ReadAsStringAsync());
+                task2.Wait();
+                string text = task2.Result;
+                text = Data_Scraper.Program.Level2DataAnalyzer.getBetween(text, "{\"isrunning\":\"", "\"}");
 
-                using (var streamWriter = new StreamWriter(webRequest.GetRequestStream()))
+                if (text == "TRUE")
                 {
-                    streamWriter.Write(json);
-                }
+                    var webRequest = (HttpWebRequest)WebRequest.Create("http://" + ipaddress3 + "/datauploader");
+                    webRequest.ContentType = "application/json";
+                    webRequest.Method = "POST";
 
-                var httpResponse = (HttpWebResponse)webRequest.GetResponse();
-                using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
-                {
-                    var result = streamReader.ReadToEnd();
+                    string json = "{\"datalist\": [";
+                    for (int i = 0; i < 32; i++)
+                    {
+                        json += "{\"datavalue\": [\"" + tempTensor.vecTensor[i].vectorPrice.ToString() + "\",\"" + tempTensor.vecTensor[i].vectorSize.ToString() +
+                                "\"]},";
+                    }
+                    json = json.Remove(json.Length - 1, 1);
+                    json += "]}";
+
+                    using (var streamWriter = new StreamWriter(webRequest.GetRequestStream()))
+                    {
+                        streamWriter.Write(json);
+                    }
+
+                    var httpResponse = (HttpWebResponse)webRequest.GetResponse();
+                    using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+                    {
+                        var result = streamReader.ReadToEnd();
+                    }
                 }
             }
             catch(Exception ex)
