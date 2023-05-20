@@ -25,7 +25,6 @@ namespace Predictor
         {
             double[] result;
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
             CudaDeviceVariable<double> d_in1 = inArray1;
@@ -35,7 +34,7 @@ namespace Predictor
             kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
             kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-            kernel.RunAsync(stream, d_in1.DevicePointer, d_in2.DevicePointer, res.DevicePointer, M, K, N);
+            kernel.Run(d_in1.DevicePointer, d_in2.DevicePointer, res.DevicePointer, M, K, N);
 
             result = res;
             d_in1.Dispose();
@@ -68,7 +67,6 @@ namespace Predictor
         {
             double[] result;
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
             CudaDeviceVariable<double> d_transOut = inArray;
@@ -77,7 +75,7 @@ namespace Predictor
             kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
             kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-            kernel.RunAsync(stream, d_transOut.DevicePointer, d_transOut_T.DevicePointer, M, K);
+            kernel.Run(d_transOut.DevicePointer, d_transOut_T.DevicePointer, M, K);
 
             result = d_transOut_T;
 
@@ -137,7 +135,6 @@ namespace Predictor
             //}
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolutionBackProp");
             int N = 1400;
 
@@ -148,7 +145,7 @@ namespace Predictor
             kernel.BlockDimensions = 256;
             kernel.GridDimensions = (N + 255) / 256;
 
-            kernel.RunAsync(stream, d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
+            kernel.Run(d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
             temp = d_res;
 
             //if(predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -229,7 +226,6 @@ namespace Predictor
             //}
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolutionBackProp");
             int N = 1400;
 
@@ -240,7 +236,7 @@ namespace Predictor
             kernel.BlockDimensions = 256;
             kernel.GridDimensions = (N + 255) / 256;
 
-            kernel.RunAsync(stream, d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
+            kernel.Run(d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
             temp = d_res;
 
             //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -275,7 +271,6 @@ namespace Predictor
         public double[] find_conv_layer_err4(double[] transDerivative)
         {
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolution2");
 
             int idx = 0;
@@ -322,7 +317,7 @@ namespace Predictor
             CudaDeviceVariable<double> dk_F2 = k_F2;
 
             CudaDeviceVariable<double> returnedVal = new CudaDeviceVariable<double>(N);
-            kernel.RunAsync(stream, d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
+            kernel.Run(d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
 
             resVal = returnedVal;
 
@@ -395,7 +390,6 @@ namespace Predictor
             //}
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolutionBackProp");
             int N = 1400;
 
@@ -406,7 +400,7 @@ namespace Predictor
             kernel.BlockDimensions = 256;
             kernel.GridDimensions = (N + 255) / 256;
 
-            kernel.RunAsync(stream, d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
+            kernel.Run(d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
             temp = d_res;
 
             //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -441,7 +435,6 @@ namespace Predictor
         public double[] find_conv_layer_err3(double[] transDerivative)
         {
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolution2");
 
             int idx = 0;
@@ -488,7 +481,7 @@ namespace Predictor
             CudaDeviceVariable<double> dk_F2 = k_F2;
 
             CudaDeviceVariable<double> returnedVal = new CudaDeviceVariable<double>(N);
-            kernel.RunAsync(stream, d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
+            kernel.Run(d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
 
             resVal = returnedVal;
 
@@ -562,7 +555,6 @@ namespace Predictor
             //}
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolutionBackProp");
             int N = 1400;
 
@@ -573,7 +565,7 @@ namespace Predictor
             kernel.BlockDimensions = 256;
             kernel.GridDimensions = (N + 255) / 256;
 
-            kernel.RunAsync(stream, d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
+            kernel.Run(d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
             temp = d_res;
 
             //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -607,7 +599,6 @@ namespace Predictor
         public double[] find_conv_layer_err2(double[] transDerivative)
         {
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolution2");
 
             int idx = 0;
@@ -654,7 +645,7 @@ namespace Predictor
             CudaDeviceVariable<double> dk_F2 = k_F2;
 
             CudaDeviceVariable<double> returnedVal = new CudaDeviceVariable<double>(N);
-            kernel.RunAsync(stream, d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
+            kernel.Run(d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
 
             resVal = returnedVal;
 
@@ -681,7 +672,6 @@ namespace Predictor
         public double[] find_conv_layer_err1(double[] transDerivative)
         {
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolution2");
 
             int idx = 0;
@@ -728,7 +718,7 @@ namespace Predictor
             CudaDeviceVariable<double> dk_F2 = k_F2;
 
             CudaDeviceVariable<double> returnedVal = new CudaDeviceVariable<double>(N);
-            kernel.RunAsync(stream, d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
+            kernel.Run(d_F.DevicePointer, dk_F.DevicePointer, d_F2.DevicePointer, dk_F2.DevicePointer, returnedVal.DevicePointer, N);
 
             resVal = returnedVal;
 
@@ -801,7 +791,6 @@ namespace Predictor
             //}
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
-            ManagedCuda.BasicTypes.CUstream stream = new ManagedCuda.BasicTypes.CUstream();
             CudaKernel kernel = ctx.LoadKernel("convolution.ptx", "convolutionBackProp");
             int N = 3200;
 
@@ -812,7 +801,7 @@ namespace Predictor
             kernel.BlockDimensions = 256;
             kernel.GridDimensions = (N + 255) / 256;
 
-            kernel.RunAsync(stream, d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
+            kernel.Run(d_derivative.DevicePointer, d_prevLayerOut.DevicePointer, d_res.DevicePointer, N);
             temp = d_res;
 
             //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
