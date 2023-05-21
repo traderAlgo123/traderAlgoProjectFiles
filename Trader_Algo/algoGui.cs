@@ -109,7 +109,7 @@ namespace Data_Scraper
         public static bool firstrun = true;
         public static bool firstStartClick = true;
         public static bool lastTradesScraperRunning = false;
-        //public static DateTime past = DateTime.Now;
+        public static DateTime past = DateTime.Now;
 
         public static bool critErr = false;
 
