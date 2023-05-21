@@ -27,9 +27,7 @@ using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.Drawing.Imaging;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Http;
-using System.Net.Http.Json;
 
 namespace Data_Scraper
 {
@@ -110,7 +108,6 @@ namespace Data_Scraper
         public static int tradesCmpIdx = 0;
         public static bool firstrun = true;
         public static bool firstStartClick = true;
-        public static bool firstStartClick2 = true;
         public static bool lastTradesScraperRunning = false;
         public static DateTime past = DateTime.Now;
 
@@ -140,6 +137,7 @@ namespace Data_Scraper
 
         private void algoGui_Load(object sender, EventArgs e)
         {
+            ServicePointManager.DefaultConnectionLimit = 64;
             pingClient.Timeout = TimeSpan.FromMilliseconds(3000);
             for (int i = 0; i < numEvents; i++)
             {
@@ -147,6 +145,25 @@ namespace Data_Scraper
                 zeroTensorArray[i] = new vectorTensor();
             }
             //startConsole();
+
+            bidsCtrl.DoWork += bidsCtrl_DoWork;
+            bidsCtrl.RunWorkerCompleted += bidsCtrl_RunWorkerCompleted;
+
+            asksCtrl.DoWork += asksCtrl_DoWork;
+            asksCtrl.RunWorkerCompleted += asksCtrl_RunWorkerCompleted;
+
+            lastsCtrl.DoWork += lastsCtrl_DoWork;
+            lastsCtrl.RunWorkerCompleted += lastsCtrl_RunWorkerCompleted;
+
+            dowCtrl.DoWork += dowCtrl_DoWork;
+            dowCtrl.RunWorkerCompleted += dowCtrl_RunWorkerCompleted;
+
+            etradeClkCtrl.DoWork += etradeClkCtrl_DoWork;
+            etradeClkCtrl.RunWorkerCompleted += etradeClkCtrl_RunWorkerCompleted;
+
+            clusterNodePingCtrl.DoWork += clusterNodePingCtrl_DoWork;
+            clusterNodePingCtrl.RunWorkerCompleted += clusterNodePingCtrl_RunWorkerCompleted;
+
             if (this.Equals(algoGui_array[0]))
             {
                 this.Location = Screen.AllScreens[1].WorkingArea.Location;
@@ -221,27 +238,8 @@ namespace Data_Scraper
                     bids.bidsSizeArray[i] = 343;
                     asks.asksSizeArray[i] = 343;
                 }
+                clusterNodePingCtrl.RunWorkerAsync();
             }
-
-            bidsCtrl.DoWork += bidsCtrl_DoWork;
-            bidsCtrl.RunWorkerCompleted += bidsCtrl_RunWorkerCompleted;
-
-            asksCtrl.DoWork += asksCtrl_DoWork;
-            asksCtrl.RunWorkerCompleted += asksCtrl_RunWorkerCompleted;
-
-            lastsCtrl.DoWork += lastsCtrl_DoWork;
-            lastsCtrl.RunWorkerCompleted += lastsCtrl_RunWorkerCompleted;
-
-            dowCtrl.DoWork += dowCtrl_DoWork;
-            dowCtrl.RunWorkerCompleted += dowCtrl_RunWorkerCompleted;
-
-            etradeClkCtrl.DoWork += etradeClkCtrl_DoWork;
-            etradeClkCtrl.RunWorkerCompleted += etradeClkCtrl_RunWorkerCompleted;
-
-            clusterNodePingCtrl.DoWork += clusterNodePingCtrl_DoWork;
-            clusterNodePingCtrl.RunWorkerCompleted += clusterNodePingCtrl_RunWorkerCompleted;
-
-            ServicePointManager.DefaultConnectionLimit = 40;
         }
 
         public void startConsole()
@@ -401,8 +399,6 @@ namespace Data_Scraper
 
         private void fullStart_Click(object sender, EventArgs e)
         {
-            if (firstStartClick2)
-                clusterNodePingCtrl.RunWorkerAsync();
             if (firstStartClick)
             {
                 algoGui_array[0].WindowState = FormWindowState.Normal;
@@ -413,7 +409,6 @@ namespace Data_Scraper
 
                 stopScraper = false;
                 firstStartClick = false;
-                firstStartClick2 = false;
                 if (executionChecker.IsAlive)
                 {
                     executionChecker.Suspend();
@@ -525,16 +520,6 @@ namespace Data_Scraper
             {
                 algoGui.algoGui_array[5].node3Status.Text = "Node 3 Offline";
             }
-
-
-            /*if(node1Online == false || node2Online == false)
-            {
-                algoGui_array[5].fullStop.PerformClick();
-            }
-            else
-            {
-                algoGui_array[5].fullStart.PerformClick();
-            }*/
         }
 
         public static void clusterNodePingCtrl_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
