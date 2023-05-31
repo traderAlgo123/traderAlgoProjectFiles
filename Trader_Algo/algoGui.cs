@@ -120,13 +120,9 @@ namespace Data_Scraper
         public static lastTradesObj lastTrades = new lastTradesObj();
         public static lastTradesObj prevTrades = new lastTradesObj();
 
-        public static string ipaddress1 = "192.168.1.121";
+        public static string ipaddress1 = "192.168.1.215";
+        public static string ipaddress2 = "192.168.1.121";
         public static string ipaddress3 = "192.168.1.224";
-        //public static string ipaddress3 = "172.28.117.71";
-        //public static string ipaddress2 = "172.28.164.120";
-        //public static string ipaddress1 = "172.28.117.71";
-        public static string ipaddress2 = "192.168.1.249";
-        //public static string ipaddress2 = "172.28.43.111";
 
         public static ProcessStartInfo predictorProcess = new ProcessStartInfo("Predictor.exe");
         public static readonly HttpClient pingClient = new HttpClient();
@@ -1480,6 +1476,33 @@ namespace Data_Scraper
             cursorPos.X = 2519;
             cursorPos.Y = 844;
             Cursor.Position = cursorPos;
+        }
+
+        private void node1IP_Click(object sender, EventArgs e)
+        {
+            if(nodeIPUpdater.Text != "")
+            {
+                ipaddress1 = nodeIPUpdater.Text;
+                nodeIPUpdater.Text = "";
+            }
+        }
+
+        private void node2IP_Click(object sender, EventArgs e)
+        {
+            if (nodeIPUpdater.Text != "")
+            {
+                ipaddress2 = nodeIPUpdater.Text;
+                nodeIPUpdater.Text = "";
+            }
+        }
+
+        private void node3IP_Click(object sender, EventArgs e)
+        {
+            if (nodeIPUpdater.Text != "")
+            {
+                ipaddress3 = nodeIPUpdater.Text;
+                nodeIPUpdater.Text = "";
+            }
         }
     }
 }

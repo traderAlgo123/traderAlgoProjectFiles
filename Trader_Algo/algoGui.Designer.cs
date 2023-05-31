@@ -83,6 +83,10 @@ namespace Data_Scraper
             this.node1Status = new System.Windows.Forms.Label();
             this.node2Status = new System.Windows.Forms.Label();
             this.node3Status = new System.Windows.Forms.Label();
+            this.nodeIPUpdater = new System.Windows.Forms.TextBox();
+            this.node1IP = new System.Windows.Forms.Button();
+            this.node2IP = new System.Windows.Forms.Button();
+            this.node3IP = new System.Windows.Forms.Button();
             this.controlBtns.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -545,11 +549,52 @@ namespace Data_Scraper
             this.node3Status.Size = new System.Drawing.Size(0, 13);
             this.node3Status.TabIndex = 51;
             // 
+            // nodeIPUpdater
+            // 
+            this.nodeIPUpdater.Location = new System.Drawing.Point(674, 635);
+            this.nodeIPUpdater.Name = "nodeIPUpdater";
+            this.nodeIPUpdater.Size = new System.Drawing.Size(120, 20);
+            this.nodeIPUpdater.TabIndex = 52;
+            // 
+            // node1IP
+            // 
+            this.node1IP.Location = new System.Drawing.Point(800, 633);
+            this.node1IP.Name = "node1IP";
+            this.node1IP.Size = new System.Drawing.Size(75, 22);
+            this.node1IP.TabIndex = 53;
+            this.node1IP.Text = "Node 1 IP";
+            this.node1IP.UseVisualStyleBackColor = true;
+            this.node1IP.Click += new System.EventHandler(this.node1IP_Click);
+            // 
+            // node2IP
+            // 
+            this.node2IP.Location = new System.Drawing.Point(879, 633);
+            this.node2IP.Name = "node2IP";
+            this.node2IP.Size = new System.Drawing.Size(75, 22);
+            this.node2IP.TabIndex = 54;
+            this.node2IP.Text = "Node 2 IP";
+            this.node2IP.UseVisualStyleBackColor = true;
+            this.node2IP.Click += new System.EventHandler(this.node2IP_Click);
+            // 
+            // node3IP
+            // 
+            this.node3IP.Location = new System.Drawing.Point(960, 633);
+            this.node3IP.Name = "node3IP";
+            this.node3IP.Size = new System.Drawing.Size(75, 22);
+            this.node3IP.TabIndex = 55;
+            this.node3IP.Text = "Node 3 IP";
+            this.node3IP.UseVisualStyleBackColor = true;
+            this.node3IP.Click += new System.EventHandler(this.node3IP_Click);
+            // 
             // algoGui
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1351, 665);
+            this.Controls.Add(this.node3IP);
+            this.Controls.Add(this.node2IP);
+            this.Controls.Add(this.node1IP);
+            this.Controls.Add(this.nodeIPUpdater);
             this.Controls.Add(this.node3Status);
             this.Controls.Add(this.node2Status);
             this.Controls.Add(this.node1Status);
@@ -647,6 +692,10 @@ namespace Data_Scraper
         public System.Windows.Forms.Label node1Status;
         public System.Windows.Forms.Label node2Status;
         public System.Windows.Forms.Label node3Status;
+        private System.Windows.Forms.TextBox nodeIPUpdater;
+        private System.Windows.Forms.Button node1IP;
+        private System.Windows.Forms.Button node2IP;
+        private System.Windows.Forms.Button node3IP;
     }
 }
 
