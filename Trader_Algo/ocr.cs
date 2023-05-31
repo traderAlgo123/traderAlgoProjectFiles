@@ -180,7 +180,7 @@ namespace Data_Scraper
                     var info = new ProcessStartInfo
                     {
                         FileName = _tesseractExePath,
-                        Arguments = @"X:\bidsLine" + index + @".jpg  X:\bidsLine" + index + " -l eng digits --psm 7",//eng+deu+fra
+                        Arguments = @"X:\bidsLine" + index + @".jpg  X:\bidsLine" + index + " -l eng+deu+fra digits --psm 7",//eng+deu+fra
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         CreateNoWindow = true,
@@ -224,7 +224,7 @@ namespace Data_Scraper
                     var info = new ProcessStartInfo
                     {
                         FileName = _tesseractExePath,
-                        Arguments = @"X:\asksLine" + index + @".jpg  X:\asksLine" + index + " -l eng digits --psm 7",
+                        Arguments = @"X:\asksLine" + index + @".jpg  X:\asksLine" + index + " -l eng+deu+fra digits --psm 7",
                         RedirectStandardError = true,
                         RedirectStandardOutput = true,
                         CreateNoWindow = true,

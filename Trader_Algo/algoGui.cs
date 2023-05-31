@@ -112,6 +112,8 @@ namespace Data_Scraper
         public static DateTime past = DateTime.Now;
 
         public static bool critErr = false;
+        public static bool[] errorLineFlag = new bool[32];
+        public static bool[] errorLineFlagRunOnce = new bool[32];
 
         public static bidsObj bids = new bidsObj();
         public static asksObj asks = new asksObj();
@@ -133,12 +135,16 @@ namespace Data_Scraper
 
         private void algoGui_Load(object sender, EventArgs e)
         {
-            ServicePointManager.DefaultConnectionLimit = 64;
             pingClient.Timeout = TimeSpan.FromMilliseconds(3000);
             for (int i = 0; i < numEvents; i++)
             {
                 tensorArray[i] = new vectorTensor();
                 zeroTensorArray[i] = new vectorTensor();
+            }
+            for(int i = 0; i < 32; i++)
+            {
+                errorLineFlag[i] = false;
+                errorLineFlagRunOnce[i] = false;
             }
             //startConsole();
 
@@ -234,6 +240,7 @@ namespace Data_Scraper
                     bids.bidsSizeArray[i] = 343;
                     asks.asksSizeArray[i] = 343;
                 }
+                ServicePointManager.DefaultConnectionLimit = 64;
                 clusterNodePingCtrl.RunWorkerAsync();
             }
         }

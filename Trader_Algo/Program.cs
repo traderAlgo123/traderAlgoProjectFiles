@@ -734,6 +734,7 @@ namespace Data_Scraper
                 {
                     Parallel.For(0, half_instances, new ParallelOptions { MaxDegreeOfParallelism = half_instances }, (j, state) =>
                     {
+                        algoGui.errorLineFlagRunOnce[j] = false;
                         string ipaddress = "";
                         int j_limit1 = 0;
                         int j_limit2 = 0;
@@ -795,7 +796,7 @@ namespace Data_Scraper
                                 response.EnsureSuccessStatusCode();
 
                                 var execRequest = new HttpRequestMessage(HttpMethod.Get, "http://" + ipaddress + "/execute?program=Tesseract&imagefile=bidsLine"
-                                    + j + ".jpg&textfileout=bidsLine" + j + "&languageparam=-l&languages=eng_fast%2Bdeu_fast&psm=--psm&numbervalue=7&oem=--oem&oemMode=3&typeofnumber=digits");//languages=eng%2Bdeu%2Bfra
+                                    + j + ".jpg&textfileout=bidsLine" + j + "&languageparam=-l&languages=eng_fast&psm=--psm&numbervalue=7&oem=--oem&oemMode=3&typeofnumber=digits");//languages=eng%2Bdeu%2Bfra
 
                                 var task2 = Task.Run(() => client.SendAsync(execRequest));
                                 task2.Wait();
@@ -832,7 +833,7 @@ namespace Data_Scraper
                             var stream = File.OpenRead(@"X:\bidsLine" + j + ".jpg");
                             text = bids_asksTessService.GetTextBids(j, stream);
                         }
-
+error_check:
                         bool sizePriceFlag = false;
                         foreach (Char data in text)
                         {
@@ -863,9 +864,19 @@ namespace Data_Scraper
                                     catch (Exception ex)
                                     {
                                         StreamWriter output = File.AppendText(@"X:\error_list_bids_sizes.txt");
-                                        output.WriteLine(dataStr + "line: " + j.ToString());
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                        //bids.bidsSizeArray[j] = 343;
+                                        algoGui.errorLineFlag[j] = true;
+                                        var stream = File.OpenRead(@"X:\bidsLine" + j + ".jpg");
+                                        text = bids_asksTessService.GetTextBids(j, stream);
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                         output.Close();
-                                        bids.bidsSizeArray[j] = 343;
+                                        if (algoGui.errorLineFlag[j] == true && algoGui.errorLineFlagRunOnce[j] == false)
+                                        {
+                                            algoGui.errorLineFlag[j] = false;
+                                            algoGui.errorLineFlagRunOnce[j] = true;
+                                            goto error_check;
+                                        }
                                         //algoGui.critErr = true;
                                     }
                                     sizePriceFlag = false;
@@ -880,10 +891,20 @@ namespace Data_Scraper
                                     catch(Exception ex)
                                     {
                                         StreamWriter output = File.AppendText(@"X:\error_list_bids_prices.txt");
-                                        output.WriteLine(dataStr + "line: " + j.ToString());
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                        //bids.bidsArray[j] = 0f;
+                                        algoGui.errorLineFlag[j] = true;
+                                        var stream = File.OpenRead(@"X:\bidsLine" + j + ".jpg");
+                                        text = bids_asksTessService.GetTextBids(j, stream);
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                         output.Close();
-                                        bids.bidsArray[j] = 0f;
-                                        algoGui.critErr = true;
+                                        if (algoGui.errorLineFlag[j] == true && algoGui.errorLineFlagRunOnce[j] == false)
+                                        {
+                                            algoGui.errorLineFlag[j] = false;
+                                            algoGui.errorLineFlagRunOnce[j] = true;
+                                            goto error_check;
+                                        }
+                                        //algoGui.critErr = true;
                                     }
                                 }
                                 dataStr = "";
@@ -891,18 +912,38 @@ namespace Data_Scraper
                             else
                             {
                                 StreamWriter output = File.AppendText(@"X:\error_list_entire_line_bids.txt");
-                                output.WriteLine(dataStr + "line: " + j.ToString());
+                                output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                //algoGui.critErr = true;
+                                algoGui.errorLineFlag[j] = true;
+                                var stream = File.OpenRead(@"X:\bidsLine" + j + ".jpg");
+                                text = bids_asksTessService.GetTextBids(j, stream);
+                                output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                 output.Close();
-                                algoGui.critErr = true;
+                                if (algoGui.errorLineFlag[j] == true && algoGui.errorLineFlagRunOnce[j] == false)
+                                {
+                                    algoGui.errorLineFlag[j] = false;
+                                    algoGui.errorLineFlagRunOnce[j] = true;
+                                    goto error_check;
+                                }
                                 dataStr = "";
                             }
                         }
                         if (bids.bidsSizeArray[j] == 0 || bids.bidsSizeArray[j] < 100)
                         {
                             StreamWriter output = File.AppendText(@"X:\error_list2_bids_sizes.txt");
-                            output.WriteLine(dataStr + "line: " + j.ToString());
+                            output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                            //bids.bidsSizeArray[j] = 343;
+                            algoGui.errorLineFlag[j] = true;
+                            var stream = File.OpenRead(@"X:\bidsLine" + j + ".jpg");
+                            text = bids_asksTessService.GetTextBids(j, stream);
+                            output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                             output.Close();
-                            bids.bidsSizeArray[j] = 343;
+                            if (algoGui.errorLineFlag[j] == true && algoGui.errorLineFlagRunOnce[j] == false)
+                            {
+                                algoGui.errorLineFlag[j] = false;
+                                algoGui.errorLineFlagRunOnce[j] = true;
+                                goto error_check;
+                            }
                             //algoGui.critErr = true;
                         }
                     });
@@ -911,6 +952,7 @@ namespace Data_Scraper
                 {
                     Parallel.For(0, half_instances, new ParallelOptions { MaxDegreeOfParallelism = half_instances }, (j, state) =>
                     {
+                        algoGui.errorLineFlagRunOnce[j + 16] = false;
                         string ipaddress = "";
                         int j_limit1 = 0;
                         int j_limit2 = 0;
@@ -972,7 +1014,7 @@ namespace Data_Scraper
                                 response.EnsureSuccessStatusCode();
 
                                 var execRequest = new HttpRequestMessage(HttpMethod.Get, "http://" + ipaddress + "/execute?program=Tesseract&imagefile=asksLine"
-                                    + j + ".jpg&textfileout=asksLine" + j + "&languageparam=-l&languages=eng_fast%2Bdeu_fast&psm=--psm&numbervalue=7&oem=--oem&oemMode=3&typeofnumber=digits");//languages=eng%2Bdeu%2Bfra
+                                    + j + ".jpg&textfileout=asksLine" + j + "&languageparam=-l&languages=eng_fast&psm=--psm&numbervalue=7&oem=--oem&oemMode=3&typeofnumber=digits");//languages=eng%2Bdeu%2Bfra
 
                                 var task2 = Task.Run(() => client.SendAsync(execRequest));
                                 task2.Wait();
@@ -1010,6 +1052,7 @@ namespace Data_Scraper
                             text = bids_asksTessService.GetTextAsks(j, stream);
                         }
 
+error_check:
                         bool sizePriceFlag = false;
                         foreach (Char data in text)
                         {
@@ -1040,9 +1083,19 @@ namespace Data_Scraper
                                     catch (Exception ex)
                                     {
                                         StreamWriter output = File.AppendText(@"X:\error_list_asks_sizes.txt");
-                                        output.WriteLine(dataStr);
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                        //asks.asksSizeArray[j] = 343;
+                                        algoGui.errorLineFlag[j + 16] = true;
+                                        var stream = File.OpenRead(@"X:\asksLine" + j + ".jpg");
+                                        text = bids_asksTessService.GetTextAsks(j, stream);
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                         output.Close();
-                                        asks.asksSizeArray[j] = 343;
+                                        if (algoGui.errorLineFlag[j + 16] == true && algoGui.errorLineFlagRunOnce[j + 16] == false)
+                                        {
+                                            algoGui.errorLineFlag[j + 16] = false;
+                                            algoGui.errorLineFlagRunOnce[j + 16] = true;
+                                            goto error_check;
+                                        }
                                         //algoGui.critErr = true;
                                     }
                                     sizePriceFlag = false;
@@ -1057,10 +1110,20 @@ namespace Data_Scraper
                                     catch (Exception ex)
                                     {
                                         StreamWriter output = File.AppendText(@"X:\error_list_asks_prices.txt");
-                                        output.WriteLine(dataStr + "line: " + j.ToString());
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                        //asks.asksArray[j] = 0f;
+                                        //algoGui.critErr = true;
+                                        algoGui.errorLineFlag[j + 16] = true;
+                                        var stream = File.OpenRead(@"X:\asksLine" + j + ".jpg");
+                                        text = bids_asksTessService.GetTextAsks(j, stream);
+                                        output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                         output.Close();
-                                        asks.asksArray[j] = 0f;
-                                        algoGui.critErr = true;
+                                        if (algoGui.errorLineFlag[j + 16] == true && algoGui.errorLineFlagRunOnce[j + 16] == false)
+                                        {
+                                            algoGui.errorLineFlag[j + 16] = false;
+                                            algoGui.errorLineFlagRunOnce[j + 16] = true;
+                                            goto error_check;
+                                        }
                                     }
                                 }
                                 dataStr = "";
@@ -1068,18 +1131,38 @@ namespace Data_Scraper
                             else
                             {
                                 StreamWriter output = File.AppendText(@"X:\error_list_entire_line_asks.txt");
-                                output.WriteLine(dataStr + "line: " + j.ToString());
+                                output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                                //algoGui.critErr = true;
+                                algoGui.errorLineFlag[j + 16] = true;
+                                var stream = File.OpenRead(@"X:\asksLine" + j + ".jpg");
+                                text = bids_asksTessService.GetTextAsks(j, stream);
+                                output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                                 output.Close();
-                                algoGui.critErr = true;
+                                if (algoGui.errorLineFlag[j + 16] == true && algoGui.errorLineFlagRunOnce[j + 16] == false)
+                                {
+                                    algoGui.errorLineFlag[j + 16] = false;
+                                    algoGui.errorLineFlagRunOnce[j + 16] = true;
+                                    goto error_check;
+                                }
                                 dataStr = "";
                             }
                         }
                         if (asks.asksSizeArray[j] == 0 || asks.asksSizeArray[j] < 100)
                         {
                             StreamWriter output = File.AppendText(@"X:\error_list2_asks_sizes.txt");
-                            output.WriteLine(dataStr + "line: " + j.ToString());
+                            output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString());
+                            //asks.asksSizeArray[j] = 343;
+                            algoGui.errorLineFlag[j + 16] = true;
+                            var stream = File.OpenRead(@"X:\asksLine" + j + ".jpg");
+                            text = bids_asksTessService.GetTextAsks(j, stream);
+                            output.WriteLine(text.Remove(text.Length - 1, 1) + " line: " + j.ToString() + "\n");
                             output.Close();
-                            asks.asksSizeArray[j] = 343;
+                            if (algoGui.errorLineFlag[j + 16] == true && algoGui.errorLineFlagRunOnce[j + 16] == false)
+                            {
+                                algoGui.errorLineFlag[j + 16] = false;
+                                algoGui.errorLineFlagRunOnce[j + 16] = true;
+                                goto error_check;
+                            }
                             //algoGui.critErr = true;
                         }
                     });
