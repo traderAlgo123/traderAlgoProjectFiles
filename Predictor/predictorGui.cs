@@ -99,6 +99,8 @@ namespace Predictor
         public static MLP mlp = new MLP();
 
         public static nnConvStructs[] convStructs = new nnConvStructs[miniBatchSize];
+        public static nnTransStructs[] transStructs = new nnTransStructs[miniBatchSize];
+        public static nnMLPStructs[] mlpStructs = new nnMLPStructs[miniBatchSize];
 
         public static ArrayList entireDaysPrices = new ArrayList();
         public static ArrayList entireDaysSizes = new ArrayList();
@@ -113,10 +115,6 @@ namespace Predictor
         public static bool changePercentIgnoredNumFlag = false;
 
         public static double[] prevPrediction = new double[3];
-
-        public static double[] transformerInput = new double[1500];
-        public static double[] transformerBlock1Output = new double[1500];
-        public static double[] transformerBlock2Output = new double[1500];
 
         public static bool trainingActivated = false;
         public static bool runOnce = false;
@@ -152,6 +150,8 @@ namespace Predictor
             {
                 adjustmentList[i] = new weightsAdjList();
                 convStructs[i] = new nnConvStructs();
+                transStructs[i] = new nnTransStructs();
+                mlpStructs[i] = new nnMLPStructs();
             }
 
             dataInputCtrl.DoWork += dataInputCtrl_DoWork;
@@ -605,16 +605,16 @@ namespace Predictor
 
             //retranspose key matrices in order to do backpropagation correctly
             matrixOps matOps = new matrixOps();
-            temp = matOps.transposeMat(Transformer_Implementation.key_head1, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head1, 0, 500);
-            temp = matOps.transposeMat(Transformer_Implementation.key_head2, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head2, 0, 500);
-            temp = matOps.transposeMat(Transformer_Implementation.key_head3, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head3, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head1, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head1, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head2, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head2, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head3, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head3, 0, 500);
 
             //save off the first transformer block output and the entire state of the first transformer block 1
-            Array.Copy(Transformer_Implementation.transformerBlockFinalOutput, 0, transformerBlock1Output, 0, 1500);
-            Array.Copy(Transformer_Implementation.residualConnectionOutputNorm, 0, Transformer_Implementation.residualConnectionOutputNormCpy, 0, 1500);
+            Array.Copy(transStructs[0].transformerBlockFinalOutput, 0, transStructs[0].transformerBlock1Output, 0, 1500);
+            Array.Copy(transStructs[0].residualConnectionOutputNorm, 0, transStructs[0].residualConnectionOutputNormCpy, 0, 1500);
             backPropFunctions.makeTransformer1InputsCopy();
 
             transformerModule.positionalEncoding(2);
@@ -645,15 +645,15 @@ namespace Predictor
                 predictorGui1.Update();
             }
 
-            Array.Copy(Transformer_Implementation.transformerBlockFinalOutput, 0, transformerBlock2Output, 0, 1500);
+            Array.Copy(transStructs[0].transformerBlockFinalOutput, 0, transStructs[0].transformerBlock2Output, 0, 1500);
 
             //retranspose key matrices in order to do backpropagation correctly
-            temp = matOps.transposeMat(Transformer_Implementation.key_head1, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head1, 0, 500);
-            temp = matOps.transposeMat(Transformer_Implementation.key_head2, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head2, 0, 500);
-            temp = matOps.transposeMat(Transformer_Implementation.key_head3, 100, 5);
-            Array.Copy(temp, 0, Transformer_Implementation.key_head3, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head1, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head1, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head2, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head2, 0, 500);
+            temp = matOps.transposeMat(transStructs[0].key_head3, 100, 5);
+            Array.Copy(temp, 0, transStructs[0].key_head3, 0, 500);
 
             watch.Stop();
             predictorGui1.transOut.Text = "Completed Transformer Blocks 1 and 2 in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
@@ -664,20 +664,20 @@ namespace Predictor
             var watch = Stopwatch.StartNew();
             mlp.firstLayer();
             mlp.secondLayer();
-            Array.Copy(MLP.secondLayerOut, 0, prevPrediction, 0, 3); //copy prediction into prevPrediction
+            Array.Copy(mlpStructs[0].secondLayerOut, 0, prevPrediction, 0, 3); //copy prediction into prevPrediction
                                                                      //this will be used to calculate the cross entropy loss of the previous prediction
                                                                      //when the predictor goes through another tensor
             if (predictorGui1.roundTo4.Checked == true)
             {
-                predictorGui1.upProb.Text = Math.Round(MLP.secondLayerOut[0], 4).ToString();
-                predictorGui1.flatProb.Text = Math.Round(MLP.secondLayerOut[1], 4).ToString();
-                predictorGui1.downProb.Text = Math.Round(MLP.secondLayerOut[2], 4).ToString();
+                predictorGui1.upProb.Text = Math.Round(mlpStructs[0].secondLayerOut[0], 4).ToString();
+                predictorGui1.flatProb.Text = Math.Round(mlpStructs[0].secondLayerOut[1], 4).ToString();
+                predictorGui1.downProb.Text = Math.Round(mlpStructs[0].secondLayerOut[2], 4).ToString();
             }
             else if(predictorGui1.roundTo3.Checked == true)
             {
-                predictorGui1.upProb.Text = Math.Round(MLP.secondLayerOut[0], 3).ToString();
-                predictorGui1.flatProb.Text = Math.Round(MLP.secondLayerOut[1], 3).ToString();
-                predictorGui1.downProb.Text = Math.Round(MLP.secondLayerOut[2], 3).ToString();
+                predictorGui1.upProb.Text = Math.Round(mlpStructs[0].secondLayerOut[0], 3).ToString();
+                predictorGui1.flatProb.Text = Math.Round(mlpStructs[0].secondLayerOut[1], 3).ToString();
+                predictorGui1.downProb.Text = Math.Round(mlpStructs[0].secondLayerOut[2], 3).ToString();
             }
             watch.Stop();
             predictorGui1.mlpOut.Text = "Completed MLP in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
@@ -708,7 +708,7 @@ namespace Predictor
                     output.WriteLine("Example Num: " + trainingExNum.ToString());
                     for (int i = 0; i < 3; i++)
                     {
-                        output.WriteLine("Prediction Probabilities[" + i.ToString() + "] = " + MLP.secondLayerOut[i].ToString() +
+                        output.WriteLine("Prediction Probabilities[" + i.ToString() + "] = " + mlpStructs[0].secondLayerOut[i].ToString() +
                             "     " + "Expected Output[" + i.ToString() + "] = " + backProp.actualOutcomes[i].ToString());
                     }
                     output.WriteLine();
@@ -756,7 +756,7 @@ namespace Predictor
                 backProp.calculateErrorMatForTransBlock1();
                 //reload inputs for transformer block 1 and rerun calculations
                 backPropFunctions.reloadTransformer1Inputs();
-                Array.Copy(transformerBlock1Output, 0, transformerBlock2Output, 0, 1500);
+                Array.Copy(transStructs[0].transformerBlock1Output, 0, transStructs[0].transformerBlock2Output, 0, 1500);
                 backProp.affineMLPCalculateAdjustments(1);
                 backProp.finalLinearLayerCalculateAdjustments(1);
                 backProp.queryKeyValueCalculateAdjustments();
@@ -1044,7 +1044,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpFirstLayerWeightsAdj, "mlpFirstLayer", 0);
                     for (int i = 0; i < 96000; i++)
                     {
-                        MLP.firstLayerWeights[i] -= backProp.mlpFirstLayer_adapted_rate[i];
+                        mlpStructs[0].firstLayerWeights[i] -= backProp.mlpFirstLayer_adapted_rate[i];
                     }
                     for (int i = 0; i < 192; i++)
                     {
@@ -1057,7 +1057,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpSecondLayerWeightsAdj, "mlpSecondLayer", 0);
                     for (int i = 0; i < 192; i++)
                     {
-                        MLP.secondLayerWeights[i] -= backProp.mlpSecondLayer_adapted_rate[i];
+                        mlpStructs[0].secondLayerWeights[i] -= backProp.mlpSecondLayer_adapted_rate[i];
                     }
                     for (int i = 0; i < 9; i++)
                     {
@@ -1080,8 +1080,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpLayer1BiasAdj, "mlpFirstLayerBiasPrelu", 0);
                     for (int i = 0; i < 64; i++)
                     {
-                        MLP.mlpLayer1Bias[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
-                        MLP.mlpLayer1PReLUParam[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
+                        mlpStructs[0].mlpLayer1Bias[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
+                        mlpStructs[0].mlpLayer1PReLUParam[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
                     }
                     for (int i = 0; i < 900; i++)
                     {
@@ -1108,8 +1108,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].affineMLPFirstLayerWeightsPass1Block2Adj, "affineMLPWeights1", 2);
                     for (int i = 0; i < 900; i++)
                     {
-                        Transformer_Implementation.affineTransWeights2[i] -= backProp.affineMLPWeights2Block2_adapted_rate[i];
-                        Transformer_Implementation.affineTransWeights1[i] -= backProp.affineMLPWeights1Block2_adapted_rate[i];
+                        transStructs[0].affineTransWeights2[i] -= backProp.affineMLPWeights2Block2_adapted_rate[i];
+                        transStructs[0].affineTransWeights1[i] -= backProp.affineMLPWeights1Block2_adapted_rate[i];
                     }
                     for(int i = 0; i < 6000; i++)
                     {
@@ -1131,8 +1131,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].affineMLPFirstLayerBiasPass2Block2Adj, "affineMLPBiasPrelu", 2);
                     for (int i = 0; i < 6000; i++)
                     {
-                        Transformer_Implementation.transPReLUBias[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
-                        Transformer_Implementation.transPReLUParam[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
+                        transStructs[0].transPReLUBias[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
+                        transStructs[0].transPReLUParam[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1500; i++)
                     {
@@ -1175,12 +1175,12 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].AddAndNormGamma1Adj, "affineMLPGamma1", 2);
                     for (int i = 0; i < 1500; i++)
                     {
-                        Transformer_Implementation.addAndNorm2Beta[i] -= backProp.affineMLPBeta2_adapted_rate[i];
-                        Transformer_Implementation.addAndNorm2Gamma[i] -= backProp.affineMLPGamma2_adapted_rate[i];
-                        Transformer_Implementation.addAndNorm1Beta[i] -= backProp.affineMLPBeta1_adapted_rate[i];
-                        Transformer_Implementation.addAndNorm1Gamma[i] -= backProp.affineMLPGamma1_adapted_rate[i];
+                        transStructs[0].addAndNorm2Beta[i] -= backProp.affineMLPBeta2_adapted_rate[i];
+                        transStructs[0].addAndNorm2Gamma[i] -= backProp.affineMLPGamma2_adapted_rate[i];
+                        transStructs[0].addAndNorm1Beta[i] -= backProp.affineMLPBeta1_adapted_rate[i];
+                        transStructs[0].addAndNorm1Gamma[i] -= backProp.affineMLPGamma1_adapted_rate[i];
 
-                        Transformer_Implementation.transMLPSecondLayerBias[i] -= backProp.affineMLPBias2_adapted_rate[i];
+                        transStructs[0].transMLPSecondLayerBias[i] -= backProp.affineMLPBias2_adapted_rate[i];
                     }
                     for (int i = 0; i < 225; i++)
                     {
@@ -1196,7 +1196,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].finalLinearLayerWeightsAdj, "finalLinearLayerWeights", 2);
                     for(int i = 0; i < 225; i++)
                     {
-                        Transformer_Implementation.finalLinearLayerWeights[i] -= backProp.finalLinearLayerBlock2_adapted_rate[i];
+                        transStructs[0].finalLinearLayerWeights[i] -= backProp.finalLinearLayerBlock2_adapted_rate[i];
                     }
                     for (int i = 0; i < 75; i++)
                     {
@@ -1286,17 +1286,17 @@ namespace Predictor
                     }
                     for (int i = 0; i < 75; i++)
                     {
-                        Transformer_Implementation.queryLinearLayerWeights_head1[i] -= backProp.queryHead1Block2_adapted_rate[i];
-                        Transformer_Implementation.keyLinearLayerWeights_head1[i] -= backProp.keyHead1Block2_adapted_rate[i];
-                        Transformer_Implementation.valueLinearLayerWeights_head1[i] -= backProp.valueHead1Block2_adapted_rate[i];
+                        transStructs[0].queryLinearLayerWeights_head1[i] -= backProp.queryHead1Block2_adapted_rate[i];
+                        transStructs[0].keyLinearLayerWeights_head1[i] -= backProp.keyHead1Block2_adapted_rate[i];
+                        transStructs[0].valueLinearLayerWeights_head1[i] -= backProp.valueHead1Block2_adapted_rate[i];
 
-                        Transformer_Implementation.queryLinearLayerWeights_head2[i] -= backProp.queryHead2Block2_adapted_rate[i];
-                        Transformer_Implementation.keyLinearLayerWeights_head2[i] -= backProp.keyHead2Block2_adapted_rate[i];
-                        Transformer_Implementation.valueLinearLayerWeights_head2[i] -= backProp.valueHead2Block2_adapted_rate[i];
+                        transStructs[0].queryLinearLayerWeights_head2[i] -= backProp.queryHead2Block2_adapted_rate[i];
+                        transStructs[0].keyLinearLayerWeights_head2[i] -= backProp.keyHead2Block2_adapted_rate[i];
+                        transStructs[0].valueLinearLayerWeights_head2[i] -= backProp.valueHead2Block2_adapted_rate[i];
 
-                        Transformer_Implementation.queryLinearLayerWeights_head3[i] -= backProp.queryHead3Block2_adapted_rate[i];
-                        Transformer_Implementation.keyLinearLayerWeights_head3[i] -= backProp.keyHead3Block2_adapted_rate[i];
-                        Transformer_Implementation.valueLinearLayerWeights_head3[i] -= backProp.valueHead3Block2_adapted_rate[i];
+                        transStructs[0].queryLinearLayerWeights_head3[i] -= backProp.queryHead3Block2_adapted_rate[i];
+                        transStructs[0].keyLinearLayerWeights_head3[i] -= backProp.keyHead3Block2_adapted_rate[i];
+                        transStructs[0].valueLinearLayerWeights_head3[i] -= backProp.valueHead3Block2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -2127,7 +2127,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 192; i++)
                 {
-                    output.WriteLine(MLP.secondLayerWeights[i].ToString());
+                    output.WriteLine(mlpStructs[0].secondLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2137,7 +2137,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 96000; i++)
                 {
-                    output.WriteLine(MLP.firstLayerWeights[i].ToString());
+                    output.WriteLine(mlpStructs[0].firstLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2147,7 +2147,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(MLP.mlpLayer1PReLUParam[i].ToString());
+                    output.WriteLine(mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -2157,7 +2157,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(MLP.mlpLayer1Bias[i].ToString());
+                    output.WriteLine(mlpStructs[0].mlpLayer1Bias[i].ToString());
                 }
                 output.Close();
             }
@@ -2170,8 +2170,8 @@ namespace Predictor
 
                 for (int i = 0; i < 900; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.affineTransWeights1[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.affineTransWeights2[i].ToString());
+                    output.WriteLine(transStructs[0].affineTransWeights1[i].ToString());
+                    output2.WriteLine(transStructs[0].affineTransWeights2[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2201,17 +2201,17 @@ namespace Predictor
 
                 for(int i = 0; i < 75; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head1[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head1[i].ToString());
-                    output3.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head1[i].ToString());
+                    output.WriteLine(transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                    output2.WriteLine(transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                    output3.WriteLine(transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                    output4.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head2[i].ToString());
-                    output5.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head2[i].ToString());
-                    output6.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head2[i].ToString());
+                    output4.WriteLine(transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                    output5.WriteLine(transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                    output6.WriteLine(transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                    output7.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head3[i].ToString());
-                    output8.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head3[i].ToString());
-                    output9.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head3[i].ToString());
+                    output7.WriteLine(transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                    output8.WriteLine(transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                    output9.WriteLine(transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2229,7 +2229,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transPReLUBias[i].ToString());
+                    output.WriteLine(transStructs[0].transPReLUBias[i].ToString());
                 }
                 output.Close();
             }
@@ -2239,7 +2239,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transPReLUParam[i].ToString());
+                    output.WriteLine(transStructs[0].transPReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -2249,7 +2249,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for(int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transMLPSecondLayerBias[i].ToString());
+                    output.WriteLine(transStructs[0].transMLPSecondLayerBias[i].ToString());
                 }
                 output.Close();
             }
@@ -2265,10 +2265,10 @@ namespace Predictor
                 StreamWriter output4 = File.AppendText(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.addAndNorm1Gamma[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.addAndNorm1Beta[i].ToString());
-                    output3.WriteLine(Transformer_Implementation.addAndNorm2Gamma[i].ToString());
-                    output4.WriteLine(Transformer_Implementation.addAndNorm2Beta[i].ToString());
+                    output.WriteLine(transStructs[0].addAndNorm1Gamma[i].ToString());
+                    output2.WriteLine(transStructs[0].addAndNorm1Beta[i].ToString());
+                    output3.WriteLine(transStructs[0].addAndNorm2Gamma[i].ToString());
+                    output4.WriteLine(transStructs[0].addAndNorm2Beta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2281,7 +2281,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                 for(int i = 0; i < 225; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.finalLinearLayerWeights[i].ToString());
+                    output.WriteLine(transStructs[0].finalLinearLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2499,27 +2499,27 @@ namespace Predictor
                         bitmapRowIdx++;
                         bitmapColIdx = 0;
                     }
-                    if (Transformer_Implementation.attention_filter_head1[i] != 0.0)
+                    if (transStructs[0].attention_filter_head1[i] != 0.0)
                     {
-                        temp = Convert.ToInt32(Transformer_Implementation.attention_filter_head1[i] * 255.0);
+                        temp = Convert.ToInt32(transStructs[0].attention_filter_head1[i] * 255.0);
                     }
                     else
                     {
                         temp = 0;
                     }
                     filter1Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
-                    if (Transformer_Implementation.attention_filter_head2[i] != 0.0)
+                    if (transStructs[0].attention_filter_head2[i] != 0.0)
                     {
-                        temp2 = Convert.ToInt32(Transformer_Implementation.attention_filter_head2[i] * 255.0);
+                        temp2 = Convert.ToInt32(transStructs[0].attention_filter_head2[i] * 255.0);
                     }
                     else
                     {
                         temp2 = 0;
                     }
                     filter2Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp2, temp2, temp2));
-                    if (Transformer_Implementation.attention_filter_head3[i] != 0.0)
+                    if (transStructs[0].attention_filter_head3[i] != 0.0)
                     {
-                        temp3 = Convert.ToInt32(Transformer_Implementation.attention_filter_head3[i] * 255.0);
+                        temp3 = Convert.ToInt32(transStructs[0].attention_filter_head3[i] * 255.0);
                     }
                     else
                     {
@@ -2538,27 +2538,27 @@ namespace Predictor
                         bitmapRowIdx++;
                         bitmapColIdx = 0;
                     }
-                    if (Transformer_Implementation.attention_filter_head1[i] != 0.0)
+                    if (transStructs[0].attention_filter_head1[i] != 0.0)
                     {
-                        temp = Convert.ToInt32(Transformer_Implementation.attention_filter_head1[i] * 255.0);
+                        temp = Convert.ToInt32(transStructs[0].attention_filter_head1[i] * 255.0);
                     }
                     else
                     {
                         temp = 0;
                     }
                     filter1Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
-                    if (Transformer_Implementation.attention_filter_head2[i] != 0.0)
+                    if (transStructs[0].attention_filter_head2[i] != 0.0)
                     {
-                        temp2 = Convert.ToInt32(Transformer_Implementation.attention_filter_head2[i] * 255.0);
+                        temp2 = Convert.ToInt32(transStructs[0].attention_filter_head2[i] * 255.0);
                     }
                     else
                     {
                         temp2 = 0;
                     }
                     filter2Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp2, temp2, temp2));
-                    if (Transformer_Implementation.attention_filter_head3[i] != 0.0)
+                    if (transStructs[0].attention_filter_head3[i] != 0.0)
                     {
-                        temp3 = Convert.ToInt32(Transformer_Implementation.attention_filter_head3[i] * 255.0);
+                        temp3 = Convert.ToInt32(transStructs[0].attention_filter_head3[i] * 255.0);
                     }
                     else
                     {
@@ -2625,7 +2625,7 @@ namespace Predictor
             Bitmap convLayer5Feature14Graphic = new Bitmap(100, 1);
             Bitmap convLayer5Feature15Graphic = new Bitmap(100, 1);
 
-            transformerInputMat = matOps.transposeMat(transformerInput, 15, 100);
+            transformerInputMat = matOps.transposeMat(transStructs[0].transformerInput, 15, 100);
 
             for(int i = 0; i < 100; i++)
             {
@@ -2997,13 +2997,13 @@ namespace Predictor
                     bitmapRowIdx++;
                     bitmapColIdx = 0;
                 }
-                if(Transformer_Implementation.positionalEncodingArray[i] < 0)
+                if(transStructs[0].positionalEncodingArray[i] < 0)
                 {
                     tempDecimal = 0;
                 }
                 else
                 {
-                    tempDecimal = Transformer_Implementation.positionalEncodingArray[i];
+                    tempDecimal = transStructs[0].positionalEncodingArray[i];
                 }
                 temp = Convert.ToInt32(tempDecimal * 255.0);
                 posEncodingImage.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
@@ -3097,7 +3097,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 192; i++)
                 {
-                    output.WriteLine(MLP.secondLayerWeights[i].ToString());
+                    output.WriteLine(mlpStructs[0].secondLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3107,7 +3107,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 96000; i++)
                 {
-                    output.WriteLine(MLP.firstLayerWeights[i].ToString());
+                    output.WriteLine(mlpStructs[0].firstLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3117,7 +3117,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(MLP.mlpLayer1PReLUParam[i].ToString());
+                    output.WriteLine(mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -3127,7 +3127,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(MLP.mlpLayer1Bias[i].ToString());
+                    output.WriteLine(mlpStructs[0].mlpLayer1Bias[i].ToString());
                 }
                 output.Close();
             }
@@ -3141,8 +3141,8 @@ namespace Predictor
 
                 for (int i = 0; i < 900; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.affineTransWeights1[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.affineTransWeights2[i].ToString());
+                    output.WriteLine(transStructs[0].affineTransWeights1[i].ToString());
+                    output2.WriteLine(transStructs[0].affineTransWeights2[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3172,17 +3172,17 @@ namespace Predictor
 
                 for (int i = 0; i < 75; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head1[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head1[i].ToString());
-                    output3.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head1[i].ToString());
+                    output.WriteLine(transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                    output2.WriteLine(transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                    output3.WriteLine(transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                    output4.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head2[i].ToString());
-                    output5.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head2[i].ToString());
-                    output6.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head2[i].ToString());
+                    output4.WriteLine(transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                    output5.WriteLine(transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                    output6.WriteLine(transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                    output7.WriteLine(Transformer_Implementation.queryLinearLayerWeights_head3[i].ToString());
-                    output8.WriteLine(Transformer_Implementation.keyLinearLayerWeights_head3[i].ToString());
-                    output9.WriteLine(Transformer_Implementation.valueLinearLayerWeights_head3[i].ToString());
+                    output7.WriteLine(transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                    output8.WriteLine(transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                    output9.WriteLine(transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3200,7 +3200,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transPReLUBias[i].ToString());
+                    output.WriteLine(transStructs[0].transPReLUBias[i].ToString());
                 }
                 output.Close();
             }
@@ -3210,7 +3210,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transPReLUParam[i].ToString());
+                    output.WriteLine(transStructs[0].transPReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -3220,7 +3220,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.transMLPSecondLayerBias[i].ToString());
+                    output.WriteLine(transStructs[0].transMLPSecondLayerBias[i].ToString());
                 }
                 output.Close();
             }
@@ -3236,10 +3236,10 @@ namespace Predictor
                 StreamWriter output4 = File.AppendText(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.addAndNorm1Gamma[i].ToString());
-                    output2.WriteLine(Transformer_Implementation.addAndNorm1Beta[i].ToString());
-                    output3.WriteLine(Transformer_Implementation.addAndNorm2Gamma[i].ToString());
-                    output4.WriteLine(Transformer_Implementation.addAndNorm2Beta[i].ToString());
+                    output.WriteLine(transStructs[0].addAndNorm1Gamma[i].ToString());
+                    output2.WriteLine(transStructs[0].addAndNorm1Beta[i].ToString());
+                    output3.WriteLine(transStructs[0].addAndNorm2Gamma[i].ToString());
+                    output4.WriteLine(transStructs[0].addAndNorm2Beta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3252,7 +3252,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 225; i++)
                 {
-                    output.WriteLine(Transformer_Implementation.finalLinearLayerWeights[i].ToString());
+                    output.WriteLine(transStructs[0].finalLinearLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3947,28 +3947,28 @@ namespace Predictor
             {
                 for(int i = 0; i < 64; i++)
                 {
-                    layerActivationsOutput.Text += MLP.firstLayerOut[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += mlpStructs[0].firstLayerOut[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "mlpLayer2")
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    layerActivationsOutput.Text += MLP.secondLayerOutRaw[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += mlpStructs[0].secondLayerOutRaw[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "TransformerBlock1Output")
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    layerActivationsOutput.Text += transformerBlock1Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += transStructs[minibatchExSelectVal].transformerBlock1Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "TransformerBlock2Output")
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    layerActivationsOutput.Text += transformerBlock2Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += transStructs[minibatchExSelectVal].transformerBlock2Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 1")

@@ -1927,7 +1927,7 @@ namespace Predictor
 
             if (predictorGui.predictorGui1.activateTraining.Checked == true)
             {
-                Array.Copy(MLP.secondLayerOut, 0, predicted, 0, 3);
+                Array.Copy(predictorGui.mlpStructs[0].secondLayerOut, 0, predicted, 0, 3);
                 Array.Copy(actualOutcomes, 0, expected, 0, 3);
             }
             else
@@ -1977,7 +1977,7 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(MLP.firstLayerWeights, M, K);
+                temp = matOps.transposeMat(predictorGui.mlpStructs[0].firstLayerWeights, M, K);
                 Array.Copy(temp, 0, firstLayerWeightsTransposed, 0, 96000);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -2020,10 +2020,10 @@ namespace Predictor
             //calculate for gamma next
             for (int i = 0; i < 1500; i++)
             {
-                Transformer_Implementation.transformerBlockFinalOutput[i] -= Transformer_Implementation.addAndNorm2Beta[i];
-                Transformer_Implementation.transformerBlockFinalOutput[i] /= Transformer_Implementation.addAndNorm2Gamma[i];
-                deltaAddAndNormGamma2[i] = error_of_affine_outBlock2[i] * Transformer_Implementation.transformerBlockFinalOutput[i];
-                dxhatTrans[i] = error_of_affine_outBlock2[i] * Transformer_Implementation.addAndNorm2Gamma[i];
+                predictorGui.transStructs[0].transformerBlockFinalOutput[i] -= predictorGui.transStructs[0].addAndNorm2Beta[i];
+                predictorGui.transStructs[0].transformerBlockFinalOutput[i] /= predictorGui.transStructs[0].addAndNorm2Gamma[i];
+                deltaAddAndNormGamma2[i] = error_of_affine_outBlock2[i] * predictorGui.transStructs[0].transformerBlockFinalOutput[i];
+                dxhatTrans[i] = error_of_affine_outBlock2[i] * predictorGui.transStructs[0].addAndNorm2Gamma[i];
             }
 
             if (blockNum == 2)
@@ -2034,19 +2034,19 @@ namespace Predictor
                 
                 for (int i = 0; i < 1500; i++)
                 {
-                    singleDivar += dxhatTrans[i] * (Transformer_Implementation.transformerBlockFinalOutputIntermediate2[i] - Transformer_Implementation.mean2_block2[meanVarIdx]);
-                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(Transformer_Implementation.variance2_block2[meanVarIdx] + Transformer_Implementation.epsilon));
+                    singleDivar += dxhatTrans[i] * (predictorGui.transStructs[0].transformerBlockFinalOutputIntermediate2[i] - predictorGui.transStructs[0].mean2_block2[meanVarIdx]);
+                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance2_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon));
                 }
                 meanVarIdx = 0;
                 normIdx = 0;
 
-                singleDsqrtvar = -1.0 / (Transformer_Implementation.variance2_block2[meanVarIdx] + Transformer_Implementation.epsilon) * singleDivar;
-                singleDvar = 0.5 * (1.0 / Math.Sqrt(Transformer_Implementation.variance2_block2[meanVarIdx] + Transformer_Implementation.epsilon)) * singleDsqrtvar;
+                singleDsqrtvar = -1.0 / (predictorGui.transStructs[0].variance2_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon) * singleDivar;
+                singleDvar = 0.5 * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance2_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon)) * singleDsqrtvar;
 
                 for (int i = 0; i < 1500; i++)
                 {
                     dsqTrans[i] = 1.0 / (100 * singleDvar);
-                    dxmu2Trans[i] = 2.0 * (Transformer_Implementation.transformerBlockFinalOutputIntermediate2[i] - Transformer_Implementation.mean2_block2[meanVarIdx]) * dsqTrans[i];
+                    dxmu2Trans[i] = 2.0 * (predictorGui.transStructs[0].transformerBlockFinalOutputIntermediate2[i] - predictorGui.transStructs[0].mean2_block2[meanVarIdx]) * dsqTrans[i];
                     dx1Trans[i] = dxmuTrans[i] + dxmu2Trans[i];
                 }
 
@@ -2070,19 +2070,19 @@ namespace Predictor
                 singleDivar = 0;
                 for (int i = 0; i < 1500; i++)
                 {
-                    singleDivar += dxhatTrans[i] * (Transformer_Implementation.transformerBlockFinalOutputIntermediate1[i] - Transformer_Implementation.mean2[meanVarIdx]);
-                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(Transformer_Implementation.variance2[meanVarIdx] + Transformer_Implementation.epsilon));
+                    singleDivar += dxhatTrans[i] * (predictorGui.transStructs[0].transformerBlockFinalOutputIntermediate1[i] - predictorGui.transStructs[0].mean2[meanVarIdx]);
+                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance2[meanVarIdx] + predictorGui.transStructs[0].epsilon));
                 }
                 meanVarIdx = 0;
                 normIdx = 0;
 
-                singleDsqrtvar = -1.0 / (Transformer_Implementation.variance2[meanVarIdx] + Transformer_Implementation.epsilon) * singleDivar;
-                singleDvar = 0.5 * (1.0 / Math.Sqrt(Transformer_Implementation.variance2[meanVarIdx] + Transformer_Implementation.epsilon)) * singleDsqrtvar;
+                singleDsqrtvar = -1.0 / (predictorGui.transStructs[0].variance2[meanVarIdx] + predictorGui.transStructs[0].epsilon) * singleDivar;
+                singleDvar = 0.5 * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance2[meanVarIdx] + predictorGui.transStructs[0].epsilon)) * singleDsqrtvar;
 
                 for(int i = 0; i < 1500; i++)
                 {
                     dsqTrans[i] = 1.0 / (100 * singleDvar);
-                    dxmu2Trans[i] = 2.0 * (Transformer_Implementation.transformerBlockFinalOutputIntermediate1[i] - Transformer_Implementation.mean2[meanVarIdx]) * dsqTrans[i];
+                    dxmu2Trans[i] = 2.0 * (predictorGui.transStructs[0].transformerBlockFinalOutputIntermediate1[i] - predictorGui.transStructs[0].mean2[meanVarIdx]) * dsqTrans[i];
                     dx1Trans[i] = dxmuTrans[i] + dxmu2Trans[i];
                 }
 
@@ -2102,8 +2102,8 @@ namespace Predictor
 
             for (int i = 0; i < 1500; i++)
             {
-                Transformer_Implementation.transformerBlockFinalOutput[i] *= Transformer_Implementation.addAndNorm2Gamma[i];
-                Transformer_Implementation.transformerBlockFinalOutput[i] += Transformer_Implementation.addAndNorm2Beta[i];
+                predictorGui.transStructs[0].transformerBlockFinalOutput[i] *= predictorGui.transStructs[0].addAndNorm2Gamma[i];
+                predictorGui.transStructs[0].transformerBlockFinalOutput[i] += predictorGui.transStructs[0].addAndNorm2Beta[i];
             }
             */
             //elementwise multiplication of the derivative of the output layer to the error_of_affine_out2Pass2Block2
@@ -2122,7 +2122,7 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(Transformer_Implementation.affineIntermediateRes2, M, K);
+                temp = matOps.transposeMat(predictorGui.transStructs[0].affineIntermediateRes2, M, K);
                 Array.Copy(temp, 0, affineIntermediateRes2Transposed, 0, 6000);
 
                 //we then multiply the matrices together to get the delta for the second block second pass affine transform
@@ -2145,7 +2145,7 @@ namespace Predictor
             }
             else
             {
-                temp = matOps.transposeMat(Transformer_Implementation.affineIntermediateRes, M, K);
+                temp = matOps.transposeMat(predictorGui.transStructs[0].affineIntermediateRes, M, K);
                 Array.Copy(temp, 0, affineIntermediateRes1Transposed, 0, 6000);
 
                 //we then multiply the matrices together to get the delta for the second block second pass affine transform
@@ -2172,7 +2172,7 @@ namespace Predictor
             //first transpose affineTransWeights4 by calling library transposeMat func
             M = 15;
             K = 60;
-            temp = matOps.transposeMat(Transformer_Implementation.affineTransWeights2, M, K);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].affineTransWeights2, M, K);
             Array.Copy(temp, 0, affineTrans2WeightsTransposed, 0, 900);
 
             //then we multiply the error matrix from earlier to this transposed weight matrix
@@ -2208,12 +2208,12 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(Transformer_Implementation.residualConnectionOutputNorm, M, K);
+                temp = matOps.transposeMat(predictorGui.transStructs[0].residualConnectionOutputNorm, M, K);
                 Array.Copy(temp, 0, residualConnectionOutputNorm2Transposed, 0, 1500);
             }
             else
             {
-                temp = matOps.transposeMat(Transformer_Implementation.residualConnectionOutputNormCpy, M, K);
+                temp = matOps.transposeMat(predictorGui.transStructs[0].residualConnectionOutputNormCpy, M, K);
                 Array.Copy(temp, 0, residualConnectionOutputNorm1Transposed, 0, 1500);
             }
 
@@ -2278,7 +2278,7 @@ namespace Predictor
 
             //we calculate the error of the previous layer before the affine transformation MLP by multiplying
             //the transpose of affineTransWeights1 with the error matrix from earlier to get the error of the output of attention block
-            temp = matOps.transposeMat(Transformer_Implementation.affineTransWeights1, M, K);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].affineTransWeights1, M, K);
             Array.Copy(temp, 0, affineTrans1WeightsTransposed, 0, 900);
 
             //do multiplication to find next error matrix
@@ -2309,17 +2309,17 @@ namespace Predictor
             {
                 if(blockNum == 2)
                 {
-                    Transformer_Implementation.residualConnectionOutputNorm[i] -= Transformer_Implementation.addAndNorm1Beta[i];
-                    Transformer_Implementation.residualConnectionOutputNorm[i] /= Transformer_Implementation.addAndNorm1Gamma[i];
-                    deltaAddAndNormGamma1[i] = error_of_output_attention_block[i] * Transformer_Implementation.residualConnectionOutputNorm[i];
-                    dxhatTrans[i] = error_of_output_attention_block[i] * Transformer_Implementation.addAndNorm1Gamma[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] -= predictorGui.transStructs[0].addAndNorm1Beta[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] /= predictorGui.transStructs[0].addAndNorm1Gamma[i];
+                    deltaAddAndNormGamma1[i] = error_of_output_attention_block[i] * predictorGui.transStructs[0].residualConnectionOutputNorm[i];
+                    dxhatTrans[i] = error_of_output_attention_block[i] * predictorGui.transStructs[0].addAndNorm1Gamma[i];
                 }
                 else
                 {
-                    Transformer_Implementation.residualConnectionOutputNormCpy[i] -= Transformer_Implementation.addAndNorm1Beta[i];
-                    Transformer_Implementation.residualConnectionOutputNormCpy[i] /= Transformer_Implementation.addAndNorm1Gamma[i];
-                    deltaAddAndNormGamma1[i] = error_of_output_attention_block[i] * Transformer_Implementation.residualConnectionOutputNormCpy[i];
-                    dxhatTrans[i] = error_of_output_attention_block[i] * Transformer_Implementation.addAndNorm1Gamma[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] -= predictorGui.transStructs[0].addAndNorm1Beta[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] /= predictorGui.transStructs[0].addAndNorm1Gamma[i];
+                    deltaAddAndNormGamma1[i] = error_of_output_attention_block[i] * predictorGui.transStructs[0].residualConnectionOutputNormCpy[i];
+                    dxhatTrans[i] = error_of_output_attention_block[i] * predictorGui.transStructs[0].addAndNorm1Gamma[i];
                 }
             }
 
@@ -2330,19 +2330,19 @@ namespace Predictor
                 singleDivar = 0;
                 for (int i = 0; i < 1500; i++)
                 {
-                    singleDivar += dxhatTrans[i] * (Transformer_Implementation.residualConnectionOutputNormIntermediate2[i] - Transformer_Implementation.mean1_block2[meanVarIdx]);
-                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(Transformer_Implementation.variance1_block2[meanVarIdx] + Transformer_Implementation.epsilon));
+                    singleDivar += dxhatTrans[i] * (predictorGui.transStructs[0].residualConnectionOutputNormIntermediate2[i] - predictorGui.transStructs[0].mean1_block2[meanVarIdx]);
+                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance1_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon));
                 }
                 meanVarIdx = 0;
                 normIdx = 0;
 
-                singleDsqrtvar = -1.0 / (Transformer_Implementation.variance1_block2[meanVarIdx] + Transformer_Implementation.epsilon) * singleDivar;
-                singleDvar = 0.5 * (1.0 / Math.Sqrt(Transformer_Implementation.variance1_block2[meanVarIdx] + Transformer_Implementation.epsilon)) * singleDsqrtvar;
+                singleDsqrtvar = -1.0 / (predictorGui.transStructs[0].variance1_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon) * singleDivar;
+                singleDvar = 0.5 * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance1_block2[meanVarIdx] + predictorGui.transStructs[0].epsilon)) * singleDsqrtvar;
 
                 for (int i = 0; i < 1500; i++)
                 {
                     dsqTrans[i] = 1.0 / (100 * singleDvar);
-                    dxmu2Trans[i] = 2.0 * (Transformer_Implementation.residualConnectionOutputNormIntermediate2[i] - Transformer_Implementation.mean1_block2[meanVarIdx]) * dsqTrans[i];
+                    dxmu2Trans[i] = 2.0 * (predictorGui.transStructs[0].residualConnectionOutputNormIntermediate2[i] - predictorGui.transStructs[0].mean1_block2[meanVarIdx]) * dsqTrans[i];
                     dx1Trans[i] = dxmuTrans[i] + dxmu2Trans[i];
                 }
 
@@ -2366,19 +2366,19 @@ namespace Predictor
                 singleDivar = 0;
                 for (int i = 0; i < 1500; i++)
                 {
-                    singleDivar += dxhatTrans[i] * (Transformer_Implementation.residualConnectionOutputNormIntermediate1[i] - Transformer_Implementation.mean1[meanVarIdx]);
-                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(Transformer_Implementation.variance1[meanVarIdx] + Transformer_Implementation.epsilon));
+                    singleDivar += dxhatTrans[i] * (predictorGui.transStructs[0].residualConnectionOutputNormIntermediate1[i] - predictorGui.transStructs[0].mean1[meanVarIdx]);
+                    dxmuTrans[i] = dxhatTrans[i] * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance1[meanVarIdx] + predictorGui.transStructs[0].epsilon));
                 }
                 meanVarIdx = 0;
                 normIdx = 0;
 
-                singleDsqrtvar = -1.0 / (Transformer_Implementation.variance1[meanVarIdx] + Transformer_Implementation.epsilon) * singleDivar;
-                singleDvar = 0.5 * (1.0 / Math.Sqrt(Transformer_Implementation.variance1[meanVarIdx] + Transformer_Implementation.epsilon)) * singleDsqrtvar;
+                singleDsqrtvar = -1.0 / (predictorGui.transStructs[0].variance1[meanVarIdx] + predictorGui.transStructs[0].epsilon) * singleDivar;
+                singleDvar = 0.5 * (1.0 / Math.Sqrt(predictorGui.transStructs[0].variance1[meanVarIdx] + predictorGui.transStructs[0].epsilon)) * singleDsqrtvar;
 
                 for (int i = 0; i < 1500; i++)
                 {
                     dsqTrans[i] = 1.0 / (100 * singleDvar);
-                    dxmu2Trans[i] = 2.0 * (Transformer_Implementation.residualConnectionOutputNormIntermediate1[i] - Transformer_Implementation.mean1[meanVarIdx]) * dsqTrans[i];
+                    dxmu2Trans[i] = 2.0 * (predictorGui.transStructs[0].residualConnectionOutputNormIntermediate1[i] - predictorGui.transStructs[0].mean1[meanVarIdx]) * dsqTrans[i];
                     dx1Trans[i] = dxmuTrans[i] + dxmu2Trans[i];
                 }
 
@@ -2400,13 +2400,13 @@ namespace Predictor
             {
                 if (blockNum == 2)
                 {
-                    Transformer_Implementation.residualConnectionOutputNorm[i] *= Transformer_Implementation.addAndNorm1Gamma[i];
-                    Transformer_Implementation.residualConnectionOutputNorm[i] += Transformer_Implementation.addAndNorm1Beta[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] *= predictorGui.transStructs[0].addAndNorm1Gamma[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] += predictorGui.transStructs[0].addAndNorm1Beta[i];
                 }
                 else
                 {
-                    Transformer_Implementation.residualConnectionOutputNormCpy[i] *= Transformer_Implementation.addAndNorm1Gamma[i];
-                    Transformer_Implementation.residualConnectionOutputNormCpy[i] += Transformer_Implementation.addAndNorm1Beta[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] *= predictorGui.transStructs[0].addAndNorm1Gamma[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] += predictorGui.transStructs[0].addAndNorm1Beta[i];
                 }
             }
             */
@@ -2457,7 +2457,7 @@ namespace Predictor
 
             //we calculate the error of the concatenated filtered value matrix by taking the transpose of the final linear layer weight matrix
             //and multiplying the final output with the final output of the attention head
-            temp = matOps.transposeMat(Transformer_Implementation.finalLinearLayerWeights, M, K);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].finalLinearLayerWeights, M, K);
             Array.Copy(temp, 0, finalLinearLayerWeightsTransposed, 0, 225);
 
             M = 100;
@@ -2556,7 +2556,7 @@ namespace Predictor
             int N = 5;
             double scaleVal = Math.Sqrt(5);
 
-            temp = matOps.transposeMat(Transformer_Implementation.inputFromConvModule, M, K);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].inputFromConvModule, M, K);
             Array.Copy(temp, 0, inputFromConvModuleTransposed, 0, 1500);
 
             Parallel.For(1, 4, (j, state) =>
@@ -2564,13 +2564,13 @@ namespace Predictor
                 //find softmax derivative for attention filters
                 if (j == 1)
                 {
-                    temp = matOps.transposeMat(Transformer_Implementation.attention_filter_head1, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head1, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans1, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans1, deconcatMat1, 100, 100, 5);
-                    temp = matOps.matrixMul(Transformer_Implementation.attention_filter_head1, deconcatMat1, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head1, deconcatMat1, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead1Err, 0, 500);
 
-                    temp = softmax_derivative(Transformer_Implementation.attention_filter_head1);
+                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head1);
                     Array.Copy(temp, 0, attention_filter_head1_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head1_der, 100, 100);
@@ -2578,21 +2578,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat1, 5, 100);
                     Array.Copy(temp, 0, deconcatMat1, 0, 500);
-                    temp = matOps.matrixMul(Transformer_Implementation.value_head1, deconcatMat1, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, deconcatMat1, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head1, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat1, 100, 5);
                     Array.Copy(temp, 0, deconcatMat1, 0, 500);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head1, 5, 100);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head1, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat1, Transformer_Implementation.value_head1, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head1, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head1, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat1, predictorGui.transStructs[0].value_head1, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head1, 0, 10000);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head1, 100, 5);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head1, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head1, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head1, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        Transformer_Implementation.query_head1[i] /= scaleVal;
-                        Transformer_Implementation.key_head1[i] /= scaleVal;
+                        predictorGui.transStructs[0].query_head1[i] /= scaleVal;
+                        predictorGui.transStructs[0].key_head1[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2602,11 +2602,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head1_trans, scores_query_gradient_head1, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head1, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head1, Transformer_Implementation.key_head1, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head1, predictorGui.transStructs[0].key_head1, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead1Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head1_der, scores_key_gradient_head1, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head1, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head1, Transformer_Implementation.query_head1, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head1, predictorGui.transStructs[0].query_head1, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead1Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead1Err, M, K, N);
@@ -2618,13 +2618,13 @@ namespace Predictor
                 }
                 else if (j == 2)
                 {
-                    temp = matOps.transposeMat(Transformer_Implementation.attention_filter_head2, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head2, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans2, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans2, deconcatMat2, 100, 100, 5);
-                    temp = matOps.matrixMul(Transformer_Implementation.attention_filter_head2, deconcatMat2, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head2, deconcatMat2, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead2Err, 0, 500);
 
-                    temp = softmax_derivative(Transformer_Implementation.attention_filter_head2);
+                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head2);
                     Array.Copy(temp, 0, attention_filter_head2_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head2_der, 100, 100);
@@ -2632,21 +2632,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat2, 5, 100);
                     Array.Copy(temp, 0, deconcatMat2, 0, 500);
-                    temp = matOps.matrixMul(Transformer_Implementation.value_head2, deconcatMat2, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, deconcatMat2, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head2, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat2, 100, 5);
                     Array.Copy(temp, 0, deconcatMat2, 0, 500);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head2, 5, 100);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head2, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat2, Transformer_Implementation.value_head2, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head2, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head2, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat2, predictorGui.transStructs[0].value_head2, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head2, 0, 10000);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head2, 100, 5);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head2, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head2, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head2, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        Transformer_Implementation.query_head2[i] /= scaleVal;
-                        Transformer_Implementation.key_head2[i] /= scaleVal;
+                        predictorGui.transStructs[0].query_head2[i] /= scaleVal;
+                        predictorGui.transStructs[0].key_head2[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2656,11 +2656,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head2_trans, scores_query_gradient_head2, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head2, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head2, Transformer_Implementation.key_head2, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head2, predictorGui.transStructs[0].key_head2, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead2Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head2_der, scores_key_gradient_head2, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head2, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head2, Transformer_Implementation.query_head2, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head2, predictorGui.transStructs[0].query_head2, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead2Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead2Err, M, K, N);
@@ -2672,13 +2672,13 @@ namespace Predictor
                 }
                 else if (j == 3)
                 {
-                    temp = matOps.transposeMat(Transformer_Implementation.attention_filter_head3, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head3, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans3, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans3, deconcatMat3, 100, 100, 5);
-                    temp = matOps.matrixMul(Transformer_Implementation.attention_filter_head3, deconcatMat3, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head3, deconcatMat3, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead3Err, 0, 500);
 
-                    temp = softmax_derivative(Transformer_Implementation.attention_filter_head3);
+                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head3);
                     Array.Copy(temp, 0, attention_filter_head3_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head3_der, 100, 100);
@@ -2686,21 +2686,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat3, 5, 100);
                     Array.Copy(temp, 0, deconcatMat3, 0, 500);
-                    temp = matOps.matrixMul(Transformer_Implementation.value_head3, deconcatMat3, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, deconcatMat3, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head3, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat3, 100, 5);
                     Array.Copy(temp, 0, deconcatMat3, 0, 500);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head3, 5, 100);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head3, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat3, Transformer_Implementation.value_head3, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head3, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head3, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat3, predictorGui.transStructs[0].value_head3, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head3, 0, 10000);
-                    temp = matOps.transposeMat(Transformer_Implementation.value_head3, 100, 5);
-                    Array.Copy(temp, 0, Transformer_Implementation.value_head3, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head3, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head3, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        Transformer_Implementation.query_head3[i] /= scaleVal;
-                        Transformer_Implementation.key_head3[i] /= scaleVal;
+                        predictorGui.transStructs[0].query_head3[i] /= scaleVal;
+                        predictorGui.transStructs[0].key_head3[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2710,11 +2710,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head3_trans, scores_query_gradient_head3, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head3, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head3, Transformer_Implementation.key_head3, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head3, predictorGui.transStructs[0].key_head3, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead3Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head3_der, scores_key_gradient_head3, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head3, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head3, Transformer_Implementation.query_head3, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head3, predictorGui.transStructs[0].query_head3, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead3Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead3Err, M, K, N);
@@ -2837,7 +2837,7 @@ namespace Predictor
 
             for(int i = 0; i < 192; i++)
             {
-                sumOfSquares += (MLP.secondLayerWeights[i] * MLP.secondLayerWeights[i]);
+                sumOfSquares += (predictorGui.mlpStructs[0].secondLayerWeights[i] * predictorGui.mlpStructs[0].secondLayerWeights[i]);
             }
 
             sumOfSquares *= L2RegLambda;
@@ -2857,7 +2857,7 @@ namespace Predictor
             M = 64;
             K = 3;
 
-            temp = matOps.transposeMat(MLP.secondLayerWeights, M, K);
+            temp = matOps.transposeMat(predictorGui.mlpStructs[0].secondLayerWeights, M, K);
             Array.Copy(temp, 0, secondLayerWeightsTransposed, 0, 192);
 
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -2924,7 +2924,7 @@ namespace Predictor
             sumOfSquares = 0;
             for(int i = 0; i < 96000; i++)
             {
-                sumOfSquares += (MLP.firstLayerWeights[i] * MLP.firstLayerWeights[i]);
+                sumOfSquares += (predictorGui.mlpStructs[0].firstLayerWeights[i] * predictorGui.mlpStructs[0].firstLayerWeights[i]);
             }
             sumOfSquares *= L2RegLambda;
 
@@ -2974,7 +2974,7 @@ namespace Predictor
             //element wise multiplication of error of first layer to derivative of first layer
             for (int i = 0; i < 64; i++)
             {
-                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * MLP.dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
+                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
             }
 
             if(predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -3019,7 +3019,7 @@ namespace Predictor
             for (int i = 0; i < 64; i++)
             {
                 error_of_first_layer[i] -= sumOfSquares;
-                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * MLP.dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
+                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
             }
 
             for (int i = 0; i < 64; i++)
@@ -3038,47 +3038,47 @@ namespace Predictor
             double[] temp;
 
             //transpose weight matrices for each attention head
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead1Trans, 0, 75);
 
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead2Trans, 0, 75);
 
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead3Trans, 0, 75);
 
             //multiply with the output of the linear layers for each attention head to get error of the input from conv module
-            temp = matOps.matrixMul(Transformer_Implementation.query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module1, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module2, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module3, 0, 1500);
 
-            temp = matOps.matrixMul(Transformer_Implementation.query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module4, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module5, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module6, 0, 1500);
 
-            temp = matOps.matrixMul(Transformer_Implementation.query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module7, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module8, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module9, 0, 1500);
 
             if(predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -3190,47 +3190,47 @@ namespace Predictor
             double[] temp;
 
             //transpose weight matrices for each attention head
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead1Trans, 0, 75);
 
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead2Trans, 0, 75);
 
-            temp = matOps.transposeMat(Transformer_Implementation.queryLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.keyLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(Transformer_Implementation.valueLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead3Trans, 0, 75);
 
             //multiply with the output of the linear layers for each attention head to get error of the input from conv module
-            temp = matOps.matrixMul(Transformer_Implementation.query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module1, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module2, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module3, 0, 1500);
 
-            temp = matOps.matrixMul(Transformer_Implementation.query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module4, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module5, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module6, 0, 1500);
 
-            temp = matOps.matrixMul(Transformer_Implementation.query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module7, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module8, 0, 1500);
-            temp = matOps.matrixMul(Transformer_Implementation.value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module9, 0, 1500);
 
             //find the average of all the errors
@@ -4378,22 +4378,22 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    derivativeOfAffine1Output[i] = Math.Exp(Transformer_Implementation.affineIntermediateRes[i]) * (4 * (Transformer_Implementation.affineIntermediateRes[i] + 1) + 
-                        (4 * Math.Exp(2 * Transformer_Implementation.affineIntermediateRes[i])) +
-                        Math.Exp(3 * Transformer_Implementation.affineIntermediateRes[i]) + Math.Exp(Transformer_Implementation.affineIntermediateRes[i]) * 
-                        (4 * Transformer_Implementation.affineIntermediateRes[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(Transformer_Implementation.affineIntermediateRes[i]) + Math.Exp(2 * Transformer_Implementation.affineIntermediateRes[i]) + 2, 2);
+                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) * (4 * (predictorGui.transStructs[0].affineIntermediateRes[i] + 1) + 
+                        (4 * Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes[i])) +
+                        Math.Exp(3 * predictorGui.transStructs[0].affineIntermediateRes[i]) + Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) * 
+                        (4 * predictorGui.transStructs[0].affineIntermediateRes[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) + Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes[i]) + 2, 2);
                 }
             }
             if (layerNum == 3)
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    derivativeOfAffine1Output[i] = Math.Exp(Transformer_Implementation.affineIntermediateRes2[i]) * (4 * (Transformer_Implementation.affineIntermediateRes2[i] + 1) +
-                        (4 * Math.Exp(2 * Transformer_Implementation.affineIntermediateRes2[i])) +
-                        Math.Exp(3 * Transformer_Implementation.affineIntermediateRes2[i]) + Math.Exp(Transformer_Implementation.affineIntermediateRes2[i]) *
-                        (4 * Transformer_Implementation.affineIntermediateRes2[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(Transformer_Implementation.affineIntermediateRes2[i]) + Math.Exp(2 * Transformer_Implementation.affineIntermediateRes2[i]) + 2, 2);
+                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) * (4 * (predictorGui.transStructs[0].affineIntermediateRes2[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes2[i])) +
+                        Math.Exp(3 * predictorGui.transStructs[0].affineIntermediateRes2[i]) + Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) *
+                        (4 * predictorGui.transStructs[0].affineIntermediateRes2[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) + Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes2[i]) + 2, 2);
                 }
             }
             if (layerNum == 13)
@@ -4575,7 +4575,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    if (Transformer_Implementation.residualConnectionOutputNormCpy[i] >= 0)
+                    if (predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] >= 0)
                     {
                         derivativeOfAttentionBlockOutput[i] = 1;
                     }
@@ -4617,7 +4617,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    if (Transformer_Implementation.residualConnectionOutputNorm[i] >= 0)
+                    if (predictorGui.transStructs[0].residualConnectionOutputNorm[i] >= 0)
                     {
                         derivativeOfAttentionBlockOutput[i] = 1;
                     }
@@ -4631,7 +4631,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (Transformer_Implementation.affineIntermediateRes3[i] >= 0)
+                    if (predictorGui.transStructs[0].affineIntermediateRes3[i] >= 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
@@ -4645,13 +4645,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (Transformer_Implementation.affineIntermediateRes[i] >= 0)
+                    if (predictorGui.transStructs[0].affineIntermediateRes[i] >= 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
                     else
                     {
-                        derivativeOfAffine1Output[i] = /*Transformer_Implementation.transPReLUParam[i]*/0;
+                        derivativeOfAffine1Output[i] = /*predictorGui.transStructs[0].transPReLUParam[i]*/0;
                     }
                 }
             }
@@ -4659,13 +4659,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (Transformer_Implementation.affineIntermediateRes2[i] > 0)
+                    if (predictorGui.transStructs[0].affineIntermediateRes2[i] > 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
                     else
                     {
-                        derivativeOfAffine1Output[i] = /*Transformer_Implementation.transPReLUParam[i]*/0;
+                        derivativeOfAffine1Output[i] = /*predictorGui.transStructs[0].transPReLUParam[i]*/0;
                     }
                 }
             }
@@ -4673,7 +4673,7 @@ namespace Predictor
             {
                 for(int i = 0; i < 1500; i++)
                 {
-                    if (predictorGui.transformerBlock2Output[i] >= 0)
+                    if (predictorGui.transStructs[0].transformerBlock2Output[i] >= 0)
                     {
                         derivativeOfAffine2Output[i] = 1;
                     }
@@ -4687,7 +4687,7 @@ namespace Predictor
             {
                 for(int i = 0; i < 3; i++)
                 {
-                    if(MLP.secondLayerOut[i] >= 0)
+                    if(predictorGui.mlpStructs[0].secondLayerOut[i] >= 0)
                     {
                         derivativeOfSecondLayerOut[i] = 1;
                     }
@@ -4702,7 +4702,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 64; i++)
                 {
-                    if (MLP.firstLayerOut[i] >= 0)
+                    if (predictorGui.mlpStructs[0].firstLayerOut[i] >= 0)
                     {
                         derivativeOfFirstLayerOut[i] = 1;
                     }

@@ -20,36 +20,20 @@ namespace Predictor
 {
     public class MLP
     {
-        public static double[] firstLayerWeights = new double[96000];
-        public static double[] mlpLayer1Bias = new double[64];
-        public static double[] mlpLayer1PReLUParam = new double[64];
-
-        public static double[] secondLayerWeights = new double[192];
-        public static double[] mlpLayer2Bias = new double[3];
-        public static double[] mlpLayer2PReLUParam = new double[3];
-
-        public static double[] thirdLayerWeights = new double[9];
-
-        public static double[] firstLayerOut = new double[64];
-        public static double[] secondLayerOut = new double[3];
-        public static double[] secondLayerOutRaw = new double[3];
-
-        public static double[] dropout_mask = new double[64];
-
         public void firstLayer()
         {
             int M = 64;
             int K = 1500;
             int N = 1;
 
-            Array.Copy(predictorGui.transformerBlock2Output, 0, backProp.firstLayerInCpy, 0, 1500);
+            Array.Copy(predictorGui.transStructs[0].transformerBlock2Output, 0, backProp.firstLayerInCpy, 0, 1500);
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
             CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
             //first MLP layer
             CudaDeviceVariable<double> d_in1 = backProp.firstLayerInCpy;
-            CudaDeviceVariable<double> d_firstLayerWeights = firstLayerWeights;
+            CudaDeviceVariable<double> d_firstLayerWeights = predictorGui.mlpStructs[0].firstLayerWeights;
             CudaDeviceVariable<double> d_firstLayerOut = new CudaDeviceVariable<double>(64);
 
             kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -57,7 +41,7 @@ namespace Predictor
 
             kernel.Run(d_firstLayerWeights.DevicePointer, d_in1.DevicePointer, d_firstLayerOut.DevicePointer, M, K, N);
 
-            firstLayerOut = d_firstLayerOut;
+            predictorGui.mlpStructs[0].firstLayerOut = d_firstLayerOut;
 
             if (predictorGui.predictorGui1.preluSelectFinalMLP.Checked == true)
             {
@@ -73,7 +57,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpLayer1.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine("First MLP Layer Out[" + i.ToString() + "] = " + firstLayerOut[i].ToString());
+                    output.WriteLine("First MLP Layer Out[" + i.ToString() + "] = " + predictorGui.mlpStructs[0].firstLayerOut[i].ToString());
                 }
                 output.Close();
             }
@@ -97,7 +81,7 @@ namespace Predictor
             }
             else
             {
-                Array.Copy(firstLayerOut, 0, backProp.firstLayerOutCpy, 0, 64);
+                Array.Copy(predictorGui.mlpStructs[0].firstLayerOut, 0, backProp.firstLayerOutCpy, 0, 64);
             }
 
             CudaContext ctx = new CudaContext(predictorGui.selectGpu);
@@ -105,7 +89,7 @@ namespace Predictor
 
             //first MLP layer
             CudaDeviceVariable<double> d_in1 = backProp.firstLayerOutCpy;
-            CudaDeviceVariable<double> d_secondLayerWeights = secondLayerWeights;
+            CudaDeviceVariable<double> d_secondLayerWeights = predictorGui.mlpStructs[0].secondLayerWeights;
             CudaDeviceVariable<double> d_secondLayerOut = new CudaDeviceVariable<double>(3);
 
             kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -113,19 +97,19 @@ namespace Predictor
 
             kernel.Run(d_secondLayerWeights.DevicePointer, d_in1.DevicePointer, d_secondLayerOut.DevicePointer, M, K, N);
 
-            secondLayerOut = d_secondLayerOut;
+            predictorGui.mlpStructs[0].secondLayerOut = d_secondLayerOut;
 
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
             {
                 StreamWriter output = File.AppendText(@"X:\mlpLayer2.txt");
                 for (int i = 0; i < 3; i++)
                 {
-                    output.WriteLine("Second MLP Layer Out[" + i.ToString() + "] = " + secondLayerOut[i].ToString());
+                    output.WriteLine("Second MLP Layer Out[" + i.ToString() + "] = " + predictorGui.mlpStructs[0].secondLayerOut[i].ToString());
                 }
                 output.Close();
             }
 
-            Array.Copy(secondLayerOut, 0, secondLayerOutRaw, 0, 3);
+            Array.Copy(predictorGui.mlpStructs[0].secondLayerOut, 0, predictorGui.mlpStructs[0].secondLayerOutRaw, 0, 3);
             softmax();
 
             d_in1.Dispose();
@@ -142,29 +126,29 @@ namespace Predictor
             //find exponential summation for use with softmax function
             for (int i = 0; i < 3; i++)
             {
-                exp_summation1 += Math.Exp(secondLayerOut[i]);
+                exp_summation1 += Math.Exp(predictorGui.mlpStructs[0].secondLayerOut[i]);
             }
 
             //apply softmax function
             for (int i = 0; i < 3; i++)
             {
-                secondLayerOut[i] = Math.Exp(secondLayerOut[i]) / exp_summation1;
+                predictorGui.mlpStructs[0].secondLayerOut[i] = Math.Exp(predictorGui.mlpStructs[0].secondLayerOut[i]) / exp_summation1;
             }
 
-            Array.Copy(secondLayerOut, 0, backProp.secondLayerOutCpy, 0, 3);
+            Array.Copy(predictorGui.mlpStructs[0].secondLayerOut, 0, backProp.secondLayerOutCpy, 0, 3);
         }
 
         public void mlpLayer1_PReLU_and_add_bias1()
         {
             for (int i = 0; i < 64; i++)
             {
-                if (firstLayerOut[i] + mlpLayer1Bias[i] > 0.0F)
+                if (predictorGui.mlpStructs[0].firstLayerOut[i] + predictorGui.mlpStructs[0].mlpLayer1Bias[i] > 0.0F)
                 {
-                    firstLayerOut[i] += mlpLayer1Bias[i];
+                    predictorGui.mlpStructs[0].firstLayerOut[i] += predictorGui.mlpStructs[0].mlpLayer1Bias[i];
                 }
                 else
                 {
-                    firstLayerOut[i] = /*(firstLayerOut[i] + mlpLayer1Bias[i]) * mlpLayer1PReLUParam[i]*/0;
+                    predictorGui.mlpStructs[0].firstLayerOut[i] = /*(firstLayerOut[i] + mlpLayer1Bias[i]) * mlpLayer1PReLUParam[i]*/0;
                 }
             }
         }
@@ -173,7 +157,7 @@ namespace Predictor
         {
             for (int i = 0; i < 64; i++)
             {
-                firstLayerOut[i] = (firstLayerOut[i] + mlpLayer1Bias[i]) * Math.Tanh(softplus(firstLayerOut[i] + mlpLayer1Bias[i]));
+                predictorGui.mlpStructs[0].firstLayerOut[i] = (predictorGui.mlpStructs[0].firstLayerOut[i] + predictorGui.mlpStructs[0].mlpLayer1Bias[i]) * Math.Tanh(softplus(predictorGui.mlpStructs[0].firstLayerOut[i] + predictorGui.mlpStructs[0].mlpLayer1Bias[i]));
             }
         }
         public double softplus(double x)
@@ -190,9 +174,9 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    mlpLayer1Bias[i] = 0;
+                    predictorGui.mlpStructs[0].mlpLayer1Bias[i] = 0;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(mlpLayer1Bias[i].ToString());
+                    output.WriteLine(predictorGui.mlpStructs[0].mlpLayer1Bias[i].ToString());
                 }
                 output.Close();
             }
@@ -202,7 +186,7 @@ namespace Predictor
                 arr = File.ReadAllLines(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    mlpLayer1Bias[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.mlpStructs[0].mlpLayer1Bias[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -215,9 +199,9 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    mlpLayer1PReLUParam[i] = 0.02F;
+                    predictorGui.mlpStructs[0].mlpLayer1PReLUParam[i] = 0.02F;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(mlpLayer1PReLUParam[i].ToString());
+                    output.WriteLine(predictorGui.mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -227,7 +211,7 @@ namespace Predictor
                 arr = File.ReadAllLines(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    mlpLayer1PReLUParam[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.mlpStructs[0].mlpLayer1PReLUParam[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -247,9 +231,9 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 96000; i++)
                     {
-                        firstLayerWeights[i] = SampleGaussian(predictorGui.rand, 0.0, std);
+                        predictorGui.mlpStructs[0].firstLayerWeights[i] = SampleGaussian(predictorGui.rand, 0.0, std);
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(firstLayerWeights[i]);
+                        output.WriteLine(predictorGui.mlpStructs[0].firstLayerWeights[i]);
                     }
                     output.Close();
                 }
@@ -258,7 +242,7 @@ namespace Predictor
                     string[] arr = File.ReadAllLines(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 96000; i++)
                     {
-                        firstLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.mlpStructs[0].firstLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -275,9 +259,9 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 192; i++)
                     {
-                        secondLayerWeights[i] = SampleGaussian(predictorGui.rand, 0.0, std);
+                        predictorGui.mlpStructs[0].secondLayerWeights[i] = SampleGaussian(predictorGui.rand, 0.0, std);
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(secondLayerWeights[i]);
+                        output.WriteLine(predictorGui.mlpStructs[0].secondLayerWeights[i]);
                     }
                     output.Close();
                 }
@@ -286,7 +270,7 @@ namespace Predictor
                     string[] arr = File.ReadAllLines(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 192; i++)
                     {
-                        secondLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.mlpStructs[0].secondLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -306,9 +290,9 @@ namespace Predictor
 
                     for (int i = 0; i < 96000; i++)
                     {
-                        firstLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.mlpStructs[0].firstLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(firstLayerWeights[i]);
+                        output.WriteLine(predictorGui.mlpStructs[0].firstLayerWeights[i]);
                     }
                     output.Close();
                 }
@@ -318,7 +302,7 @@ namespace Predictor
                     arr = File.ReadAllLines(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 96000; i++)
                     {
-                        firstLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.mlpStructs[0].firstLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -336,9 +320,9 @@ namespace Predictor
 
                     for (int i = 0; i < 192; i++)
                     {
-                        secondLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.mlpStructs[0].secondLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(secondLayerWeights[i].ToString());
+                        output.WriteLine(predictorGui.mlpStructs[0].secondLayerWeights[i].ToString());
                     }
                     output.Close();
                 }
@@ -348,7 +332,7 @@ namespace Predictor
                     arr = File.ReadAllLines(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 192; i++)
                     {
-                        secondLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.mlpStructs[0].secondLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -373,22 +357,22 @@ namespace Predictor
             //implement dropout with a certain specified percentage frequency
             if (layerNum == 1)
             {
-                Array.Copy(firstLayerOut, 0, backProp.firstLayerOutCpy, 0, 64);
+                Array.Copy(predictorGui.mlpStructs[0].firstLayerOut, 0, backProp.firstLayerOutCpy, 0, 64);
                 for (int i = 0; i < 64; i++)
                 {
                     int randomValue0To99 = predictorGui.rand.Next(100);
                     if (randomValue0To99 < hiddenPercentageDropOut)
                     {
-                        dropout_mask[i] = 0; //changed 5/8/2022 potential dropout bug with earlier implementation
+                        predictorGui.mlpStructs[0].dropout_mask[i] = 0; //changed 5/8/2022 potential dropout bug with earlier implementation
                     }
                     else
                     {
-                        dropout_mask[i] = 1.0F / (1.0F - backProp.hiddenDropOutRate);
+                        predictorGui.mlpStructs[0].dropout_mask[i] = 1.0F / (1.0F - backProp.hiddenDropOutRate);
                     }
                 }
                 for (int i = 0; i < 64; i++)
                 {
-                    backProp.firstLayerOutCpy[i] *= dropout_mask[i];
+                    backProp.firstLayerOutCpy[i] *= predictorGui.mlpStructs[0].dropout_mask[i];
                 }
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {

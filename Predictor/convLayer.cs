@@ -139,7 +139,7 @@ namespace Predictor
             }
             predictorGui.predictorGui1.label2.Text = "Convolutions completed in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
 
-            Array.Copy(predictorGui.convStructs[0].temporalEncodedNormOutput, 0, predictorGui.transformerInput, 0, 1500);
+            Array.Copy(predictorGui.convStructs[0].temporalEncodedNormOutput, 0, predictorGui.transStructs[0].transformerInput, 0, 1500);
         }
 
         public void conv_full_layer1()

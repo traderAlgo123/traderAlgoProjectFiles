@@ -37,103 +37,7 @@ namespace Predictor
 
     public class Transformer_Implementation
     {
-        public static double[] mean1 = new double[15];
-        public static double[] mean1_block2 = new double[15];
-        public static double[] mean2 = new double[15];
-        public static double[] mean2_block2 = new double[15];
-        public static double[] variance1 = new double[15];
-        public static double[] variance1_block2 = new double[15];
-        public static double[] variance2 = new double[15];
-        public static double[] variance2_block2 = new double[15];
-        public static double epsilon;
-        public static double[] positionalEncodingArray = new double[1500];
-        public static double[] positionalEncodingArrayCpy = new double[1500];
-        public static double[] inputFromConvModule = new double[1500];
-        public static double[] inputFromConvModuleCpy = new double[1500];
-
-        public static double[] queryLinearLayerWeights_head1 = new double[75];
-        public static double[] keyLinearLayerWeights_head1 = new double[75];
-        public static double[] valueLinearLayerWeights_head1 = new double[75];
-
-        public static double[] queryLinearLayerWeights_head2 = new double[75];
-        public static double[] keyLinearLayerWeights_head2 = new double[75];
-        public static double[] valueLinearLayerWeights_head2 = new double[75];
-
-        public static double[] queryLinearLayerWeights_head3 = new double[75];
-        public static double[] keyLinearLayerWeights_head3 = new double[75];
-        public static double[] valueLinearLayerWeights_head3 = new double[75];
-
-        public static double[] query_head1 = new double[500];
-        public static double[] key_head1 = new double[500];
-        public static double[] value_head1 = new double[500];
-        public static double[] filtered_value_head1 = new double[500];
-        public static double[] query_head1Cpy = new double[500];
-        public static double[] key_head1Cpy = new double[500];
-        public static double[] value_head1Cpy = new double[500];
-        public static double[] filtered_value_head1Cpy = new double[500];
-
-        public static double[] query_head2 = new double[500];
-        public static double[] key_head2 = new double[500];
-        public static double[] value_head2 = new double[500];
-        public static double[] filtered_value_head2 = new double[500];
-        public static double[] query_head2Cpy = new double[500];
-        public static double[] key_head2Cpy = new double[500];
-        public static double[] value_head2Cpy = new double[500];
-        public static double[] filtered_value_head2Cpy = new double[500];
-
-        public static double[] query_head3 = new double[500];
-        public static double[] key_head3 = new double[500];
-        public static double[] value_head3 = new double[500];
-        public static double[] filtered_value_head3 = new double[500];
-        public static double[] query_head3Cpy = new double[500];
-        public static double[] key_head3Cpy = new double[500];
-        public static double[] value_head3Cpy = new double[500];
-        public static double[] filtered_value_head3Cpy = new double[500];
-
-        public static double[] attention_filter_head1 = new double[10000];
-        public static double[] attention_filter_head2 = new double[10000];
-        public static double[] attention_filter_head3 = new double[10000];
-        public static double[] attention_filter_head1Cpy = new double[10000];
-        public static double[] attention_filter_head2Cpy = new double[10000];
-        public static double[] attention_filter_head3Cpy = new double[10000];
-
-        public static double[] concatenatedFilteredValueMatrix = new double[1500];
-        public static double[] concatenatedFilteredValueMatrixCpy = new double[1500];
-
-        public static double[] finalLinearLayerWeights = new double[225];
-        public static double[] finalAttentionBlockOutput = new double[1500];
-        public static double[] finalAttentionBlockOutputCpy = new double[1500];
-
-        public static double[] residualConnectionOutputNorm = new double[1500];
-        public static double[] residualConnectionOutputNormCpy = new double[1500];
-
-        public static double[] residualConnectionOutputNormIntermediate1 = new double[1500];
-        public static double[] residualConnectionOutputNormIntermediate2 = new double[1500];
-
-        public static double[] addAndNorm1Gamma = new double[1500];
-        public static double[] addAndNorm1Beta = new double[1500];
-        public static double[] addAndNorm2Gamma = new double[1500];
-        public static double[] addAndNorm2Beta = new double[1500];
-
-        public static double[] affineTransWeights1 = new double[900];
-        public static double[] affineTransWeights2 = new double[900];
-        public static double[] affineTransWeights3 = new double[900];
-        public static double[] affineTransWeights4 = new double[900];
-
-        public static double[] transPReLUParam = new double[6000];
-        public static double[] transPReLUBias = new double[6000];
-
-        public static double[] transMLPSecondLayerBias = new double[1500];
-
-        public static double[] affineIntermediateRes = new double[6000];
-        public static double[] affineIntermediateRes2 = new double[6000];
-        public static double[] affineIntermediateRes3 = new double[6000];
-        public static double[] affineIntermediateRes4 = new double[6000];
-
-        public static double[] transformerBlockFinalOutput = new double[1500];
-        public static double[] transformerBlockFinalOutput2 = new double[1500];
-        public static double[] transformerBlockFinalOutputIntermediate1 = new double[1500];
-        public static double[] transformerBlockFinalOutputIntermediate2 = new double[1500];
+        
 
         //this function requires you to input the matrix dimensions you WANT the transposed matrix to have
         //i.e. if you are transposing a 100x5 matrix you input M = 5 and K = 100 as the parameters.
@@ -144,7 +48,7 @@ namespace Predictor
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
-                CudaDeviceVariable<double> d_in1 = key_head1;
+                CudaDeviceVariable<double> d_in1 = predictorGui.transStructs[0].key_head1;
                 CudaDeviceVariable<double> d_in1_T = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -153,14 +57,14 @@ namespace Predictor
                 //kernel.Run(d_in1.DevicePointer, d_in1_T.DevicePointer, M, K);
                 kernel.Run(d_in1.DevicePointer, d_in1_T.DevicePointer, M, K);
 
-                key_head1 = d_in1_T;
+                predictorGui.transStructs[0].key_head1 = d_in1_T;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix1_transposed.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix 1 Transposed[" + i.ToString() + "] = " + key_head1[i].ToString());
+                        output.WriteLine("Key Matrix 1 Transposed[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head1[i].ToString());
                     }
                     output.Close();
                 }
@@ -175,7 +79,7 @@ namespace Predictor
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
-                CudaDeviceVariable<double> d_in2 = key_head2;
+                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].key_head2;
                 CudaDeviceVariable<double> d_in2_T = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -183,14 +87,14 @@ namespace Predictor
 
                 kernel.Run(d_in2.DevicePointer, d_in2_T.DevicePointer, M, K);
 
-                key_head2 = d_in2_T;
+                predictorGui.transStructs[0].key_head2 = d_in2_T;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix2_transposed.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix 2 Transposed[" + i.ToString() + "] = " + key_head2[i].ToString());
+                        output.WriteLine("Key Matrix 2 Transposed[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head2[i].ToString());
                     }
                     output.Close();
                 }
@@ -205,7 +109,7 @@ namespace Predictor
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("transpose.ptx", "transpose");
 
-                CudaDeviceVariable<double> d_in3 = key_head3;
+                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].key_head3;
                 CudaDeviceVariable<double> d_in3_T = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -213,14 +117,14 @@ namespace Predictor
 
                 kernel.Run(d_in3.DevicePointer, d_in3_T.DevicePointer, M, K);
 
-                key_head3 = d_in3_T;
+                predictorGui.transStructs[0].key_head3 = d_in3_T;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix3_transposed.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix 3 Transposed[" + i.ToString() + "] = " + key_head3[i].ToString());
+                        output.WriteLine("Key Matrix 3 Transposed[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head3[i].ToString());
                     }
                     output.Close();
                 }
@@ -244,8 +148,8 @@ namespace Predictor
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 1
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights = queryLinearLayerWeights_head1;
+                CudaDeviceVariable<double> d_in1 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_queryWeights = predictorGui.transStructs[0].queryLinearLayerWeights_head1;
                 CudaDeviceVariable<double> d_queryMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -253,27 +157,27 @@ namespace Predictor
 
                 kernel.Run(d_in1.DevicePointer, d_queryWeights.DevicePointer, d_queryMat.DevicePointer, M, K, N);
 
-                query_head1 = d_queryMat;
+                predictorGui.transStructs[0].query_head1 = d_queryMat;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\queryMatrix1.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head1[i].ToString());
+                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].query_head1[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head1.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head1[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head1[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, query_head1, "query", 1);
+                        verify_result(M, K, N, predictorGui.transStructs[0].query_head1, "query", 1);
                     }
                 }
 
@@ -283,8 +187,8 @@ namespace Predictor
                 //query matrix linear layer head 1 END
 
                 //key matrix linear layer head 1
-                CudaDeviceVariable<double> d_in2 = inputFromConvModule;
-                CudaDeviceVariable<double> d_keyWeights = keyLinearLayerWeights_head1;
+                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_keyWeights = predictorGui.transStructs[0].keyLinearLayerWeights_head1;
                 CudaDeviceVariable<double> d_keyMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -292,27 +196,27 @@ namespace Predictor
 
                 kernel.Run(d_in2.DevicePointer, d_keyWeights.DevicePointer, d_keyMat.DevicePointer, M, K, N);
 
-                key_head1 = d_keyMat;
+                predictorGui.transStructs[0].key_head1 = d_keyMat;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix1.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + key_head1[i].ToString());
+                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head1[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\keylinearLayerWeights_head1.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(keyLinearLayerWeights_head1[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head1[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, key_head1, "key", 1);
+                        verify_result(M, K, N, predictorGui.transStructs[0].key_head1, "key", 1);
                     }
                 }
 
@@ -322,8 +226,8 @@ namespace Predictor
                 //key matrix linear layer head 1 END
 
                 //value matrix linear layer head 1
-                CudaDeviceVariable<double> d_in3 = inputFromConvModule;
-                CudaDeviceVariable<double> d_valueWeights = valueLinearLayerWeights_head1;
+                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_valueWeights = predictorGui.transStructs[0].valueLinearLayerWeights_head1;
                 CudaDeviceVariable<double> d_valueMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -331,27 +235,27 @@ namespace Predictor
 
                 kernel.Run(d_in3.DevicePointer, d_valueWeights.DevicePointer, d_valueMat.DevicePointer, M, K, N);
 
-                value_head1 = d_valueMat;
+                predictorGui.transStructs[0].value_head1 = d_valueMat;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\valueMatrix1.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + value_head1[i].ToString());
+                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].value_head1[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\valuelinearLayerWeights_head1.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(valueLinearLayerWeights_head1[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head1[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, value_head1, "value", 1);
+                        verify_result(M, K, N, predictorGui.transStructs[0].value_head1, "value", 1);
                     }
                 }
                 //value matrix linear layer head 1 END
@@ -367,8 +271,8 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 1);
 
-                CudaDeviceVariable<double> d_query = query_head1;
-                CudaDeviceVariable<double> d_key = key_head1;
+                CudaDeviceVariable<double> d_query = predictorGui.transStructs[0].query_head1;
+                CudaDeviceVariable<double> d_key = predictorGui.transStructs[0].key_head1;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head1 = new CudaDeviceVariable<double>(10000);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -376,20 +280,20 @@ namespace Predictor
 
                 kernel.Run(d_query.DevicePointer, d_key.DevicePointer, d_preliminary_attention_filter_head1.DevicePointer, M, K, N);
 
-                attention_filter_head1 = d_preliminary_attention_filter_head1;
+                predictorGui.transStructs[0].attention_filter_head1 = d_preliminary_attention_filter_head1;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\attentionFilter1.txt");
                     for (int i = 0; i < 10000; i++)
                     {
-                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + attention_filter_head1[i].ToString());
+                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head1[i].ToString());
                     }
                     output.Close();
                 }
 
                 if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                 {
-                    verify_result(M, K, N, attention_filter_head1, "attention", 1);
+                    verify_result(M, K, N, predictorGui.transStructs[0].attention_filter_head1, "attention", 1);
                 }
 
                 d_query.Dispose();
@@ -408,8 +312,8 @@ namespace Predictor
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 2
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights2 = queryLinearLayerWeights_head2;
+                CudaDeviceVariable<double> d_in1 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_queryWeights2 = predictorGui.transStructs[0].queryLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_queryMat2 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -417,27 +321,27 @@ namespace Predictor
 
                 kernel.Run( d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
 
-                query_head2 = d_queryMat2;
+                predictorGui.transStructs[0].query_head2 = d_queryMat2;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\queryMatrix2.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head2[i].ToString());
+                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].query_head2[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head2.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head2[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head2[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, query_head2, "query", 2);
+                        verify_result(M, K, N, predictorGui.transStructs[0].query_head2, "query", 2);
                     }
                 }
 
@@ -447,8 +351,8 @@ namespace Predictor
                 //query matrix linear layer head 2 END
 
                 //key matrix linear layer head 2
-                CudaDeviceVariable<double> d_in2 = inputFromConvModule;
-                CudaDeviceVariable<double> d_keyWeights2 = keyLinearLayerWeights_head2;
+                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_keyWeights2 = predictorGui.transStructs[0].keyLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_keyMat2 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -456,27 +360,27 @@ namespace Predictor
 
                 kernel.Run(d_in2.DevicePointer, d_keyWeights2.DevicePointer, d_keyMat2.DevicePointer, M, K, N);
 
-                key_head2 = d_keyMat2;
+                predictorGui.transStructs[0].key_head2 = d_keyMat2;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix2.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + key_head2[i].ToString());
+                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head2[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\keylinearLayerWeights_head2.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(keyLinearLayerWeights_head2[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head2[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, key_head2, "key", 2);
+                        verify_result(M, K, N, predictorGui.transStructs[0].key_head2, "key", 2);
                     }
                 }
 
@@ -486,8 +390,8 @@ namespace Predictor
                 //key matrix linear layer head 2 END
 
                 //value matrix linear layer head 2
-                CudaDeviceVariable<double> d_in3 = inputFromConvModule;
-                CudaDeviceVariable<double> d_valueWeights2 = valueLinearLayerWeights_head2;
+                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_valueWeights2 = predictorGui.transStructs[0].valueLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_valueMat2 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -495,27 +399,27 @@ namespace Predictor
 
                 kernel.Run(d_in3.DevicePointer, d_valueWeights2.DevicePointer, d_valueMat2.DevicePointer, M, K, N);
 
-                value_head2 = d_valueMat2;
+                predictorGui.transStructs[0].value_head2 = d_valueMat2;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\valueMatrix2.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + value_head2[i].ToString());
+                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].value_head2[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\valuelinearLayerWeights_head2.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(valueLinearLayerWeights_head2[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head2[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, value_head2, "value", 2);
+                        verify_result(M, K, N, predictorGui.transStructs[0].value_head2, "value", 2);
                     }
                 }
                 //value matrix linear layer head 2 END
@@ -531,8 +435,8 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 2);
 
-                CudaDeviceVariable<double> d_query2 = query_head2;
-                CudaDeviceVariable<double> d_key2 = key_head2;
+                CudaDeviceVariable<double> d_query2 = predictorGui.transStructs[0].query_head2;
+                CudaDeviceVariable<double> d_key2 = predictorGui.transStructs[0].key_head2;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head2 = new CudaDeviceVariable<double>(10000);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -540,20 +444,20 @@ namespace Predictor
 
                 kernel.Run(d_query2.DevicePointer, d_key2.DevicePointer, d_preliminary_attention_filter_head2.DevicePointer, M, K, N);
 
-                attention_filter_head2 = d_preliminary_attention_filter_head2;
+                predictorGui.transStructs[0].attention_filter_head2 = d_preliminary_attention_filter_head2;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\attentionFilter2.txt");
                     for (int i = 0; i < 10000; i++)
                     {
-                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + attention_filter_head2[i].ToString());
+                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head2[i].ToString());
                     }
                     output.Close();
                 }
 
                 if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                 {
-                    verify_result(M, K, N, attention_filter_head2, "attention", 2);
+                    verify_result(M, K, N, predictorGui.transStructs[0].attention_filter_head2, "attention", 2);
                 }
 
                 d_query2.Dispose();
@@ -572,8 +476,8 @@ namespace Predictor
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 3
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights3 = queryLinearLayerWeights_head3;
+                CudaDeviceVariable<double> d_in1 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_queryWeights3 = predictorGui.transStructs[0].queryLinearLayerWeights_head3;
                 CudaDeviceVariable<double> d_queryMat3 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -581,27 +485,27 @@ namespace Predictor
 
                 kernel.Run(d_in1.DevicePointer, d_queryWeights3.DevicePointer, d_queryMat3.DevicePointer, M, K, N);
 
-                query_head3 = d_queryMat3;
+                predictorGui.transStructs[0].query_head3 = d_queryMat3;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\queryMatrix3.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head3[i].ToString());
+                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].query_head3[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head3.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head3[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head3[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, query_head3, "query", 3);
+                        verify_result(M, K, N, predictorGui.transStructs[0].query_head3, "query", 3);
                     }
                 }
 
@@ -611,8 +515,8 @@ namespace Predictor
                 //query matrix linear layer head 3 END
 
                 //key matrix linear layer head 3
-                CudaDeviceVariable<double> d_in2 = inputFromConvModule;
-                CudaDeviceVariable<double> d_keyWeights3 = keyLinearLayerWeights_head3;
+                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_keyWeights3 = predictorGui.transStructs[0].keyLinearLayerWeights_head3;
                 CudaDeviceVariable<double> d_keyMat3 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -620,27 +524,27 @@ namespace Predictor
 
                 kernel.Run(d_in2.DevicePointer, d_keyWeights3.DevicePointer, d_keyMat3.DevicePointer, M, K, N);
 
-                key_head3 = d_keyMat3;
+                predictorGui.transStructs[0].key_head3 = d_keyMat3;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\keyMatrix3.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + key_head3[i].ToString());
+                        output.WriteLine("Key Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].key_head3[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\keylinearLayerWeights_head3.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(keyLinearLayerWeights_head3[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head3[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, key_head3, "key", 3);
+                        verify_result(M, K, N, predictorGui.transStructs[0].key_head3, "key", 3);
                     }
                 }
 
@@ -650,8 +554,8 @@ namespace Predictor
                 //key matrix linear layer head 3 END
 
                 //value matrix linear layer head 3
-                CudaDeviceVariable<double> d_in3 = inputFromConvModule;
-                CudaDeviceVariable<double> d_valueWeights3 = valueLinearLayerWeights_head3;
+                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                CudaDeviceVariable<double> d_valueWeights3 = predictorGui.transStructs[0].valueLinearLayerWeights_head3;
                 CudaDeviceVariable<double> d_valueMat3 = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -659,27 +563,27 @@ namespace Predictor
 
                 kernel.Run(d_in3.DevicePointer, d_valueWeights3.DevicePointer, d_valueMat3.DevicePointer, M, K, N);
 
-                value_head3 = d_valueMat3;
+                predictorGui.transStructs[0].value_head3 = d_valueMat3;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\valueMatrix3.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + value_head3[i].ToString());
+                        output.WriteLine("Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].value_head3[i].ToString());
                     }
                     output.Close();
 
                     StreamWriter linearLayerWeights = File.AppendText(@"X:\valuelinearLayerWeights_head3.txt");
                     for (int i = 0; i < 75; i++)
                     {
-                        linearLayerWeights.WriteLine(valueLinearLayerWeights_head3[i].ToString());
+                        linearLayerWeights.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                     }
                     linearLayerWeights.Close();
 
                     if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                     {
-                        verify_result(M, K, N, value_head3, "value", 3);
+                        verify_result(M, K, N, predictorGui.transStructs[0].value_head3, "value", 3);
                     }
                 }
                 //value matrix linear layer head 3 END
@@ -695,8 +599,8 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 3);
 
-                CudaDeviceVariable<double> d_query3 = query_head3;
-                CudaDeviceVariable<double> d_key3 = key_head3;
+                CudaDeviceVariable<double> d_query3 = predictorGui.transStructs[0].query_head3;
+                CudaDeviceVariable<double> d_key3 = predictorGui.transStructs[0].key_head3;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head3 = new CudaDeviceVariable<double>(10000);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -704,20 +608,20 @@ namespace Predictor
 
                 kernel.Run(d_query3.DevicePointer, d_key3.DevicePointer, d_preliminary_attention_filter_head3.DevicePointer, M, K, N);
 
-                attention_filter_head3 = d_preliminary_attention_filter_head3;
+                predictorGui.transStructs[0].attention_filter_head3 = d_preliminary_attention_filter_head3;
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\attentionFilter3.txt");
                     for (int i = 0; i < 10000; i++)
                     {
-                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + attention_filter_head3[i].ToString());
+                        output.WriteLine("Attention Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head3[i].ToString());
                     }
                     output.Close();
                 }
 
                 if (predictorGui.predictorGui1.confirmCPU.Checked == true)
                 {
-                    verify_result(M, K, N, attention_filter_head3, "attention", 3);
+                    verify_result(M, K, N, predictorGui.transStructs[0].attention_filter_head3, "attention", 3);
                 }
 
                 d_query3.Dispose();
@@ -743,8 +647,8 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * queryLinearLayerWeights_head1[i * N + col];
-                            output.WriteLine(inputFromConvModule[row * K + i] + " * " + queryLinearLayerWeights_head1[i * N + col]);
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].queryLinearLayerWeights_head1[i * N + col];
+                            output.WriteLine(predictorGui.transStructs[0].inputFromConvModule[row * K + i] + " * " + predictorGui.transStructs[0].queryLinearLayerWeights_head1[i * N + col]);
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -760,7 +664,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * keyLinearLayerWeights_head1[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].keyLinearLayerWeights_head1[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -775,7 +679,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * valueLinearLayerWeights_head1[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].valueLinearLayerWeights_head1[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -790,7 +694,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * queryLinearLayerWeights_head2[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].queryLinearLayerWeights_head2[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -805,7 +709,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * keyLinearLayerWeights_head2[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].keyLinearLayerWeights_head2[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -820,7 +724,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * valueLinearLayerWeights_head2[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].valueLinearLayerWeights_head2[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -835,7 +739,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * queryLinearLayerWeights_head3[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].queryLinearLayerWeights_head3[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -850,7 +754,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * keyLinearLayerWeights_head3[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].keyLinearLayerWeights_head3[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -865,7 +769,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += inputFromConvModule[row * K + i] * valueLinearLayerWeights_head3[i * N + col];
+                            tmp += predictorGui.transStructs[0].inputFromConvModule[row * K + i] * predictorGui.transStructs[0].valueLinearLayerWeights_head3[i * N + col];
                         }
                         temp_array[row * N + col] = tmp;
                     }
@@ -881,8 +785,8 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += query_head1[row * K + i] * key_head1[i * N + col];
-                            output.WriteLine(query_head1[row * K + i] + " * " + key_head1[i * N + col]);
+                            tmp += predictorGui.transStructs[0].query_head1[row * K + i] * predictorGui.transStructs[0].key_head1[i * N + col];
+                            output.WriteLine(predictorGui.transStructs[0].query_head1[row * K + i] + " * " + predictorGui.transStructs[0].key_head1[i * N + col]);
                         }
                         temp_array2[row * N + col] = tmp;
                     }
@@ -898,7 +802,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += query_head2[row * K + i] * key_head2[i * N + col];
+                            tmp += predictorGui.transStructs[0].query_head2[row * K + i] * predictorGui.transStructs[0].key_head2[i * N + col];
                         }
                         temp_array2[row * N + col] = tmp;
                     }
@@ -913,7 +817,7 @@ namespace Predictor
                         double tmp = 0;
                         for (int i = 0; i < K; i++)
                         {
-                            tmp += query_head3[row * K + i] * key_head3[i * N + col];
+                            tmp += predictorGui.transStructs[0].query_head3[row * K + i] * predictorGui.transStructs[0].key_head3[i * N + col];
                         }
                         temp_array2[row * N + col] = tmp;
                     }
@@ -958,7 +862,7 @@ namespace Predictor
                 double i = 0;
                 double d = 15; //full length of a single feature vector
 
-                Array.Copy(predictorGui.transformerInput, 0, inputFromConvModule, 0, 1500);
+                Array.Copy(predictorGui.transStructs[0].transformerInput, 0, predictorGui.transStructs[0].inputFromConvModule, 0, 1500);
 
                 /* unknown if we even need sinusoidal positional encoding at all, there is a distinct possibility this is
                  * drowning out the output of the convolutional module, which would cause learning to stall. We already have
@@ -1027,7 +931,7 @@ namespace Predictor
                     }
                 }*/
                 //trick attention head functions into using the output of the first transformer block
-                Array.Copy(transformerBlockFinalOutput, 0, inputFromConvModule, 0, 1500);
+                Array.Copy(predictorGui.transStructs[0].transformerBlockFinalOutput, 0, predictorGui.transStructs[0].inputFromConvModule, 0, 1500);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
@@ -1035,8 +939,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\posEncodedInput.txt");
                     for (int j = 0; j < 1500; j++)
                     {
-                        output.WriteLine("Positional Encoding[" + j.ToString() + "] = " + positionalEncodingArray[j].ToString());
-                        output2.WriteLine("Positionally Encoded Input[" + j.ToString() + "] = " + transformerBlockFinalOutput[j].ToString());
+                        output.WriteLine("Positional Encoding[" + j.ToString() + "] = " + predictorGui.transStructs[0].positionalEncodingArray[j].ToString());
+                        output2.WriteLine("Positionally Encoded Input[" + j.ToString() + "] = " + predictorGui.transStructs[0].transformerBlockFinalOutput[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -1061,9 +965,9 @@ namespace Predictor
             //apply scaling
             for (int i = 0; i < 10000; i++)
             {
-                attention_filter_head1[i] = attention_filter_head1[i] / scaleVal;
-                attention_filter_head2[i] = attention_filter_head2[i] / scaleVal;
-                attention_filter_head3[i] = attention_filter_head3[i] / scaleVal;
+                predictorGui.transStructs[0].attention_filter_head1[i] = predictorGui.transStructs[0].attention_filter_head1[i] / scaleVal;
+                predictorGui.transStructs[0].attention_filter_head2[i] = predictorGui.transStructs[0].attention_filter_head2[i] / scaleVal;
+                predictorGui.transStructs[0].attention_filter_head3[i] = predictorGui.transStructs[0].attention_filter_head3[i] / scaleVal;
             }
 
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -1071,21 +975,21 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\scaledSoftmaxOutput1.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + attention_filter_head1[i].ToString());
+                    output.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head1[i].ToString());
                 }
                 output.Close();
 
                 StreamWriter output2 = File.AppendText(@"X:\scaledSoftmaxOutput2.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output2.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + attention_filter_head2[i].ToString());
+                    output2.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head2[i].ToString());
                 }
                 output2.Close();
 
                 StreamWriter output3 = File.AppendText(@"X:\scaledSoftmaxOutput3.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output3.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + attention_filter_head3[i].ToString());
+                    output3.WriteLine("Attention Matrix Unmasked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head3[i].ToString());
                 }
                 output3.Close();
             }
@@ -1095,9 +999,9 @@ namespace Predictor
             //apply masking
             for (int i = 0; i < 100; i++)
             {
-                Array.Copy(mask, 0, attention_filter_head1, destIdx, len);
-                Array.Copy(mask, 0, attention_filter_head2, destIdx, len);
-                Array.Copy(mask, 0, attention_filter_head3, destIdx, len);
+                Array.Copy(mask, 0, predictorGui.transStructs[0].attention_filter_head1, destIdx, len);
+                Array.Copy(mask, 0, predictorGui.transStructs[0].attention_filter_head2, destIdx, len);
+                Array.Copy(mask, 0, predictorGui.transStructs[0].attention_filter_head3, destIdx, len);
                 destIdx += 101;
                 len--;
             }
@@ -1109,9 +1013,9 @@ namespace Predictor
                 {
                     sumIdx++;
                 }
-                exp_summation1[sumIdx] += Math.Exp(attention_filter_head1[i]);
-                exp_summation2[sumIdx] += Math.Exp(attention_filter_head2[i]);
-                exp_summation3[sumIdx] += Math.Exp(attention_filter_head3[i]);
+                exp_summation1[sumIdx] += Math.Exp(predictorGui.transStructs[0].attention_filter_head1[i]);
+                exp_summation2[sumIdx] += Math.Exp(predictorGui.transStructs[0].attention_filter_head2[i]);
+                exp_summation3[sumIdx] += Math.Exp(predictorGui.transStructs[0].attention_filter_head3[i]);
             }
             if(predictorGui.predictorGui1.enableOutputs.Checked == true)
             {
@@ -1129,30 +1033,30 @@ namespace Predictor
                 {
                     sumIdx++;
                 }
-                attention_filter_head1[i] = Math.Exp(attention_filter_head1[i]) / exp_summation1[sumIdx];
-                attention_filter_head2[i] = Math.Exp(attention_filter_head2[i]) / exp_summation2[sumIdx];
-                attention_filter_head3[i] = Math.Exp(attention_filter_head3[i]) / exp_summation3[sumIdx];
+                predictorGui.transStructs[0].attention_filter_head1[i] = Math.Exp(predictorGui.transStructs[0].attention_filter_head1[i]) / exp_summation1[sumIdx];
+                predictorGui.transStructs[0].attention_filter_head2[i] = Math.Exp(predictorGui.transStructs[0].attention_filter_head2[i]) / exp_summation2[sumIdx];
+                predictorGui.transStructs[0].attention_filter_head3[i] = Math.Exp(predictorGui.transStructs[0].attention_filter_head3[i]) / exp_summation3[sumIdx];
             }
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
             {
                 StreamWriter output = File.AppendText(@"X:\scaledSoftmaxMaskedOutput1.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + attention_filter_head1[i].ToString());
+                    output.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head1[i].ToString());
                 }
                 output.Close();
 
                 StreamWriter output2 = File.AppendText(@"X:\scaledSoftmaxMaskedOutput2.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output2.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + attention_filter_head2[i].ToString());
+                    output2.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head2[i].ToString());
                 }
                 output2.Close();
 
                 StreamWriter output3 = File.AppendText(@"X:\scaledSoftmaxMaskedOutput3.txt");
                 for (int i = 0; i < 10000; i++)
                 {
-                    output3.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + attention_filter_head3[i].ToString());
+                    output3.WriteLine("Attention Matrix Masked[" + i.ToString() + "] = " + predictorGui.transStructs[0].attention_filter_head3[i].ToString());
                 }
                 output3.Close();
             }
@@ -1168,8 +1072,8 @@ namespace Predictor
                 int M = 100;
                 int K = 100;
                 int N = 5;
-                CudaDeviceVariable<double> d_maskedSelfAttentionFilter1 = attention_filter_head1;
-                CudaDeviceVariable<double> d_value1 = value_head1;
+                CudaDeviceVariable<double> d_maskedSelfAttentionFilter1 = predictorGui.transStructs[0].attention_filter_head1;
+                CudaDeviceVariable<double> d_value1 = predictorGui.transStructs[0].value_head1;
                 CudaDeviceVariable<double> d_filteredValMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -1177,14 +1081,14 @@ namespace Predictor
 
                 kernel.Run(d_maskedSelfAttentionFilter1.DevicePointer, d_value1.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
-                filtered_value_head1 = d_filteredValMat;
+                predictorGui.transStructs[0].filtered_value_head1 = d_filteredValMat;
 
                 if(predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\filteredValMat1.txt");
                     for(int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + filtered_value_head1[i].ToString());
+                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].filtered_value_head1[i].ToString());
                     }
                     output.Close();
                 }
@@ -1208,8 +1112,8 @@ namespace Predictor
                 int M = 100;
                 int K = 100;
                 int N = 5;
-                CudaDeviceVariable<double> d_maskedSelfAttentionFilter2 = attention_filter_head2;
-                CudaDeviceVariable<double> d_value2 = value_head2;
+                CudaDeviceVariable<double> d_maskedSelfAttentionFilter2 = predictorGui.transStructs[0].attention_filter_head2;
+                CudaDeviceVariable<double> d_value2 = predictorGui.transStructs[0].value_head2;
                 CudaDeviceVariable<double> d_filteredValMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -1217,14 +1121,14 @@ namespace Predictor
 
                 kernel.Run(d_maskedSelfAttentionFilter2.DevicePointer, d_value2.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
-                filtered_value_head2 = d_filteredValMat;
+                predictorGui.transStructs[0].filtered_value_head2 = d_filteredValMat;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\filteredValMat2.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + filtered_value_head2[i].ToString());
+                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].filtered_value_head2[i].ToString());
                     }
                     output.Close();
                 }
@@ -1243,8 +1147,8 @@ namespace Predictor
                 int M = 100;
                 int K = 100;
                 int N = 5;
-                CudaDeviceVariable<double> d_maskedSelfAttentionFilter3 = attention_filter_head3;
-                CudaDeviceVariable<double> d_value3 = value_head3;
+                CudaDeviceVariable<double> d_maskedSelfAttentionFilter3 = predictorGui.transStructs[0].attention_filter_head3;
+                CudaDeviceVariable<double> d_value3 = predictorGui.transStructs[0].value_head3;
                 CudaDeviceVariable<double> d_filteredValMat = new CudaDeviceVariable<double>(500);
 
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -1252,14 +1156,14 @@ namespace Predictor
 
                 kernel.Run(d_maskedSelfAttentionFilter3.DevicePointer, d_value3.DevicePointer, d_filteredValMat.DevicePointer, M, K, N);
 
-                filtered_value_head3 = d_filteredValMat;
+                predictorGui.transStructs[0].filtered_value_head3 = d_filteredValMat;
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\filteredValMat3.txt");
                     for (int i = 0; i < 500; i++)
                     {
-                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + filtered_value_head3[i].ToString());
+                        output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].filtered_value_head3[i].ToString());
                     }
                     output.Close();
                 }
@@ -1283,7 +1187,7 @@ namespace Predictor
                     double tmp = 0;
                     for (int i = 0; i < K; i++)
                     {
-                        tmp += attention_filter_head1[row * K + i] * value_head1[i * N + col];
+                        tmp += predictorGui.transStructs[0].attention_filter_head1[row * K + i] * predictorGui.transStructs[0].value_head1[i * N + col];
                     }
                     temp_array[row * N + col] = tmp;
                 }
@@ -1292,7 +1196,7 @@ namespace Predictor
             StreamWriter output = File.AppendText(@"X:\filteredValueMatrix_CPU" + head.ToString() + ".txt");
             for (int i = 0; i < 500; i++)
             {
-                if (Math.Round(temp_array[i], 5) != Math.Round(filtered_value_head1[i], 5))
+                if (Math.Round(temp_array[i], 5) != Math.Round(predictorGui.transStructs[0].filtered_value_head1[i], 5))
                 {
                     predictorGui.predictorGui1.transOut.Text = "Not equal at index " + i.ToString();
                 }
@@ -1309,7 +1213,7 @@ namespace Predictor
             {
                 if(concatIdx < 5)
                 {
-                    concatenatedFilteredValueMatrix[i] = filtered_value_head1[j];
+                    predictorGui.transStructs[0].concatenatedFilteredValueMatrix[i] = predictorGui.transStructs[0].filtered_value_head1[j];
                     if (j % 4 == 0 && j != 0)
                     {
                         j = j / 4 - 1;
@@ -1321,7 +1225,7 @@ namespace Predictor
                 }
                 else if(concatIdx >= 5 && concatIdx < 10)
                 {
-                    concatenatedFilteredValueMatrix[i] = filtered_value_head2[j];
+                    predictorGui.transStructs[0].concatenatedFilteredValueMatrix[i] = predictorGui.transStructs[0].filtered_value_head2[j];
                     if (j % 4 == 0 && j != 0)
                     {
                         j = j / 4 - 1;
@@ -1333,7 +1237,7 @@ namespace Predictor
                 }
                 else if(concatIdx >= 10 && concatIdx < 15)
                 {
-                    concatenatedFilteredValueMatrix[i] = filtered_value_head3[j];
+                    predictorGui.transStructs[0].concatenatedFilteredValueMatrix[i] = predictorGui.transStructs[0].filtered_value_head3[j];
                     if (concatIdx == 14)
                     {
                         concatIdx = 0;
@@ -1356,7 +1260,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\concatenatedfilteredValueMatrix.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine("Concatenated Filtered Value Matrix[" + i.ToString() + "] = " + concatenatedFilteredValueMatrix[i].ToString());
+                    output.WriteLine("Concatenated Filtered Value Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].concatenatedFilteredValueMatrix[i].ToString());
                 }
                 output.Close();
             }
@@ -1370,8 +1274,8 @@ namespace Predictor
             int M = 100;
             int K = 15;
             int N = 15;
-            CudaDeviceVariable<double> d_concatFiltValMat = concatenatedFilteredValueMatrix;
-            CudaDeviceVariable<double> d_finalLinearLayerWeights = finalLinearLayerWeights;
+            CudaDeviceVariable<double> d_concatFiltValMat = predictorGui.transStructs[0].concatenatedFilteredValueMatrix;
+            CudaDeviceVariable<double> d_finalLinearLayerWeights = predictorGui.transStructs[0].finalLinearLayerWeights;
             CudaDeviceVariable<double> d_finalAttentionBlockOut = new CudaDeviceVariable<double>(1500);
 
             kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
@@ -1379,14 +1283,14 @@ namespace Predictor
 
             kernel.Run(d_concatFiltValMat.DevicePointer, d_finalLinearLayerWeights.DevicePointer, d_finalAttentionBlockOut.DevicePointer, M, K, N);
 
-            finalAttentionBlockOutput = d_finalAttentionBlockOut;
+            predictorGui.transStructs[0].finalAttentionBlockOutput = d_finalAttentionBlockOut;
 
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
             {
                 StreamWriter output = File.AppendText(@"X:\finalAttentionBlockOutput.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine("Final Output Matrix[" + i.ToString() + "] = " + finalAttentionBlockOutput[i].ToString());
+                    output.WriteLine("Final Output Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].finalAttentionBlockOutput[i].ToString());
                 }
                 output.Close();
             }
@@ -1414,7 +1318,7 @@ namespace Predictor
                     double tmp = 0;
                     for (int i = 0; i < K; i++)
                     {
-                        tmp += concatenatedFilteredValueMatrix[row * K + i] * finalLinearLayerWeights[i * N + col];
+                        tmp += predictorGui.transStructs[0].concatenatedFilteredValueMatrix[row * K + i] * predictorGui.transStructs[0].finalLinearLayerWeights[i * N + col];
                     }
                     temp_array[row * N + col] = tmp;
                 }
@@ -1423,7 +1327,7 @@ namespace Predictor
             StreamWriter output = File.AppendText(@"X:\finalAttentionBlockOutput_CPU.txt");
             for (int i = 0; i < 1500; i++)
             {
-                if (Math.Round(temp_array[i], 5) != Math.Round(finalAttentionBlockOutput[i], 5))
+                if (Math.Round(temp_array[i], 5) != Math.Round(predictorGui.transStructs[0].finalAttentionBlockOutput[i], 5))
                 {
                     predictorGui.predictorGui1.transOut.Text = "Not equal at index " + i.ToString();
                 }
@@ -1441,7 +1345,7 @@ namespace Predictor
                 //implement out residual connection from input to attention heads to output of attention block
                 for (int i = 0; i < 1500; i++)
                 {
-                    residualConnectionOutputNorm[i] = inputFromConvModule[i] + finalAttentionBlockOutput[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] = predictorGui.transStructs[0].inputFromConvModule[i] + predictorGui.transStructs[0].finalAttentionBlockOutput[i];
                 }
                 /*
                 double feature_summation = 0;
@@ -1501,7 +1405,7 @@ namespace Predictor
                 //implement our residual connection from input to affineMLP to output of affineMLP
                 for (int i = 0; i < 1500; i++)
                 {
-                    transformerBlockFinalOutput[i] += residualConnectionOutputNorm[i];
+                    predictorGui.transStructs[0].transformerBlockFinalOutput[i] += predictorGui.transStructs[0].residualConnectionOutputNorm[i];
                 }
                 /*
                 matrixOps matOps = new matrixOps();
@@ -1566,14 +1470,14 @@ namespace Predictor
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    residualConnectionOutputNorm[i] = (addAndNorm1Gamma[i] * residualConnectionOutputNorm[i]) + addAndNorm1Beta[i];
+                    predictorGui.transStructs[0].residualConnectionOutputNorm[i] = (predictorGui.transStructs[0].addAndNorm1Gamma[i] * predictorGui.transStructs[0].residualConnectionOutputNorm[i]) + predictorGui.transStructs[0].addAndNorm1Beta[i];
                 }
             }
             if (pass == 2)
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    transformerBlockFinalOutput[i] = (addAndNorm2Gamma[i] * transformerBlockFinalOutput[i]) + addAndNorm2Beta[i];
+                    predictorGui.transStructs[0].transformerBlockFinalOutput[i] = (predictorGui.transStructs[0].addAndNorm2Gamma[i] * predictorGui.transStructs[0].transformerBlockFinalOutput[i]) + predictorGui.transStructs[0].addAndNorm2Beta[i];
                 }
             }
         }
@@ -1588,15 +1492,15 @@ namespace Predictor
                 int K = 15;
                 int N = 60;
 
-                temp = matOps.matrixMul(residualConnectionOutputNorm, affineTransWeights1, M, K, N);
-                Array.Copy(temp, 0, affineIntermediateRes, 0, 6000);
+                temp = matOps.matrixMul(predictorGui.transStructs[0].residualConnectionOutputNorm, predictorGui.transStructs[0].affineTransWeights1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].affineIntermediateRes, 0, 6000);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\affineIntermediateRes.txt");
                     for (int i = 0; i < 6000; i++)
                     {
-                        output.WriteLine("Intermediate Affine Transformed Matrix[" + i.ToString() + "] = " + affineIntermediateRes[i].ToString());
+                        output.WriteLine("Intermediate Affine Transformed Matrix[" + i.ToString() + "] = " + predictorGui.transStructs[0].affineIntermediateRes[i].ToString());
                     }
                     output.Close();
                 }
@@ -1610,8 +1514,8 @@ namespace Predictor
                 K = 60;
                 N = 15;
 
-                temp = matOps.matrixMul(affineIntermediateRes, affineTransWeights2, M, K, N);
-                Array.Copy(temp, 0, transformerBlockFinalOutput, 0, 1500);
+                temp = matOps.matrixMul(predictorGui.transStructs[0].affineIntermediateRes, predictorGui.transStructs[0].affineTransWeights2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].transformerBlockFinalOutput, 0, 1500);
 
                 transformerMLP_add_bias_to_output();
 
@@ -1620,7 +1524,7 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\transformerBlockFinalOutput1.txt");
                     for (int i = 0; i < 1500; i++)
                     {
-                        output.WriteLine("Transformer Block 1 Output[" + i.ToString() + "] = " + transformerBlockFinalOutput[i].ToString());
+                        output.WriteLine("Transformer Block 1 Output[" + i.ToString() + "] = " + predictorGui.transStructs[0].transformerBlockFinalOutput[i].ToString());
                     }
                     output.Close();
                 }
@@ -1633,15 +1537,15 @@ namespace Predictor
                 int K = 15;
                 int N = 60;
 
-                temp = matOps.matrixMul(residualConnectionOutputNorm, affineTransWeights1, M, K, N);
-                Array.Copy(temp, 0, affineIntermediateRes2, 0, 6000);
+                temp = matOps.matrixMul(predictorGui.transStructs[0].residualConnectionOutputNorm, predictorGui.transStructs[0].affineTransWeights1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].affineIntermediateRes2, 0, 6000);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\affineIntermediateRes2.txt");
                     for (int i = 0; i < 6000; i++)
                     {
-                        output.WriteLine("Intermediate Affine Transformed Matrix 2[" + i.ToString() + "] = " + affineIntermediateRes2[i].ToString());
+                        output.WriteLine("Intermediate Affine Transformed Matrix 2[" + i.ToString() + "] = " + predictorGui.transStructs[0].affineIntermediateRes2[i].ToString());
                     }
                     output.Close();
                 }
@@ -1655,8 +1559,8 @@ namespace Predictor
                 K = 60;
                 N = 15;
 
-                temp = matOps.matrixMul(affineIntermediateRes2, affineTransWeights2, M, K, N);
-                Array.Copy(temp, 0, transformerBlockFinalOutput, 0, 1500);
+                temp = matOps.matrixMul(predictorGui.transStructs[0].affineIntermediateRes2, predictorGui.transStructs[0].affineTransWeights2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].transformerBlockFinalOutput, 0, 1500);
 
                 transformerMLP_add_bias_to_output();
 
@@ -1665,7 +1569,7 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\transformerBlockFinalOutput2.txt");
                     for (int i = 0; i < 1500; i++)
                     {
-                        output.WriteLine("Transformer Block 2 Output[" + i.ToString() + "] = " + transformerBlockFinalOutput[i].ToString());
+                        output.WriteLine("Transformer Block 2 Output[" + i.ToString() + "] = " + predictorGui.transStructs[0].transformerBlockFinalOutput[i].ToString());
                     }
                     output.Close();
                 }
@@ -1676,13 +1580,13 @@ namespace Predictor
         {
             for (int i = 0; i < 6000; i++)
             {
-                if (affineIntermediateRes[i] + transPReLUBias[i] > 0.0F)
+                if (predictorGui.transStructs[0].affineIntermediateRes[i] + predictorGui.transStructs[0].transPReLUBias[i] > 0.0F)
                 {
-                    affineIntermediateRes[i] += transPReLUBias[i];
+                    predictorGui.transStructs[0].affineIntermediateRes[i] += predictorGui.transStructs[0].transPReLUBias[i];
                 }
                 else
                 {
-                    affineIntermediateRes[i] = 0;
+                    predictorGui.transStructs[0].affineIntermediateRes[i] = 0;
                 }
             }
         }
@@ -1691,13 +1595,13 @@ namespace Predictor
         {
             for (int i = 0; i < 6000; i++)
             {
-                if (affineIntermediateRes2[i] + transPReLUBias[i] > 0.0F)
+                if (predictorGui.transStructs[0].affineIntermediateRes2[i] + predictorGui.transStructs[0].transPReLUBias[i] > 0.0F)
                 {
-                    affineIntermediateRes2[i] += transPReLUBias[i];
+                    predictorGui.transStructs[0].affineIntermediateRes2[i] += predictorGui.transStructs[0].transPReLUBias[i];
                 }
                 else
                 {
-                    affineIntermediateRes2[i] = 0;
+                    predictorGui.transStructs[0].affineIntermediateRes2[i] = 0;
                 }
             }
         }
@@ -1706,7 +1610,7 @@ namespace Predictor
         {
             for (int i = 0; i < 6000; i++)
             {
-                affineIntermediateRes[i] = (affineIntermediateRes[i] + transPReLUBias[i]) * Math.Tanh(softplus(affineIntermediateRes[i] + transPReLUBias[i]));
+                predictorGui.transStructs[0].affineIntermediateRes[i] = (predictorGui.transStructs[0].affineIntermediateRes[i] + predictorGui.transStructs[0].transPReLUBias[i]) * Math.Tanh(softplus(predictorGui.transStructs[0].affineIntermediateRes[i] + predictorGui.transStructs[0].transPReLUBias[i]));
             }
         }
 
@@ -1714,7 +1618,7 @@ namespace Predictor
         {
             for (int i = 0; i < 6000; i++)
             {
-                affineIntermediateRes2[i] = (affineIntermediateRes2[i] + transPReLUBias[i]) * Math.Tanh(softplus(affineIntermediateRes2[i] + transPReLUBias[i]));
+                predictorGui.transStructs[0].affineIntermediateRes2[i] = (predictorGui.transStructs[0].affineIntermediateRes2[i] + predictorGui.transStructs[0].transPReLUBias[i]) * Math.Tanh(softplus(predictorGui.transStructs[0].affineIntermediateRes2[i] + predictorGui.transStructs[0].transPReLUBias[i]));
             }
         }
 
@@ -1729,7 +1633,7 @@ namespace Predictor
         {
             for(int i = 0; i < 1500; i++)
             {
-                transformerBlockFinalOutput[i] += transMLPSecondLayerBias[i];
+                predictorGui.transStructs[0].transformerBlockFinalOutput[i] += predictorGui.transStructs[0].transMLPSecondLayerBias[i];
             }
         }
 
@@ -1740,9 +1644,9 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    transPReLUBias[i] = 0;
+                    predictorGui.transStructs[0].transPReLUBias[i] = 0;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(transPReLUBias[i].ToString());
+                    output.WriteLine(predictorGui.transStructs[0].transPReLUBias[i].ToString());
                 }
                 output.Close();
             }
@@ -1752,7 +1656,7 @@ namespace Predictor
                 arr = File.ReadAllLines(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    transPReLUBias[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.transStructs[0].transPReLUBias[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -1761,9 +1665,9 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    transMLPSecondLayerBias[i] = 0;
+                    predictorGui.transStructs[0].transMLPSecondLayerBias[i] = 0;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(transMLPSecondLayerBias[i].ToString());
+                    output.WriteLine(predictorGui.transStructs[0].transMLPSecondLayerBias[i].ToString());
                 }
                 output.Close();
             }
@@ -1773,7 +1677,7 @@ namespace Predictor
                 arr = File.ReadAllLines(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for(int i = 0; i < 1500; i++)
                 {
-                    transMLPSecondLayerBias[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.transStructs[0].transMLPSecondLayerBias[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -1786,9 +1690,9 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    transPReLUParam[i] = 0.02F;
+                    predictorGui.transStructs[0].transPReLUParam[i] = 0.02F;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(transPReLUParam[i].ToString());
+                    output.WriteLine(predictorGui.transStructs[0].transPReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -1798,7 +1702,7 @@ namespace Predictor
                 arr = File.ReadAllLines(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    transPReLUParam[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.transStructs[0].transPReLUParam[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -1814,18 +1718,18 @@ namespace Predictor
                 StreamWriter output4 = File.AppendText(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    addAndNorm1Gamma[i] = 1;
+                    predictorGui.transStructs[0].addAndNorm1Gamma[i] = 1;
                     predictorGui.numOfLearnableParams++;
-                    output.WriteLine(addAndNorm1Gamma[i]);
-                    addAndNorm1Beta[i] = 0;
+                    output.WriteLine(predictorGui.transStructs[0].addAndNorm1Gamma[i]);
+                    predictorGui.transStructs[0].addAndNorm1Beta[i] = 0;
                     predictorGui.numOfLearnableParams++;
-                    output2.WriteLine(addAndNorm1Beta[i]);
-                    addAndNorm2Gamma[i] = 1;
+                    output2.WriteLine(predictorGui.transStructs[0].addAndNorm1Beta[i]);
+                    predictorGui.transStructs[0].addAndNorm2Gamma[i] = 1;
                     predictorGui.numOfLearnableParams++;
-                    output3.WriteLine(addAndNorm2Gamma[i]);
-                    addAndNorm2Beta[i] = 0;
+                    output3.WriteLine(predictorGui.transStructs[0].addAndNorm2Gamma[i]);
+                    predictorGui.transStructs[0].addAndNorm2Beta[i] = 0;
                     predictorGui.numOfLearnableParams++;
-                    output4.WriteLine(addAndNorm2Beta[i]);
+                    output4.WriteLine(predictorGui.transStructs[0].addAndNorm2Beta[i]);
                 }
                 output.Close();
                 output2.Close();
@@ -1844,13 +1748,13 @@ namespace Predictor
                 arr4 = File.ReadAllLines(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    addAndNorm1Gamma[i] = Convert.ToDouble(arr[i]);
+                    predictorGui.transStructs[0].addAndNorm1Gamma[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
-                    addAndNorm1Beta[i] = Convert.ToDouble(arr2[i]);
+                    predictorGui.transStructs[0].addAndNorm1Beta[i] = Convert.ToDouble(arr2[i]);
                     predictorGui.numOfLearnableParams++;
-                    addAndNorm2Gamma[i] = Convert.ToDouble(arr3[i]);
+                    predictorGui.transStructs[0].addAndNorm2Gamma[i] = Convert.ToDouble(arr3[i]);
                     predictorGui.numOfLearnableParams++;
-                    addAndNorm2Beta[i] = Convert.ToDouble(arr4[i]);
+                    predictorGui.transStructs[0].addAndNorm2Beta[i] = Convert.ToDouble(arr4[i]);
                     predictorGui.numOfLearnableParams++;
                 }
             }
@@ -1880,35 +1784,35 @@ namespace Predictor
 
                     for (int i = 0; i < 75; i++)
                     {
-                        queryLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(queryLinearLayerWeights_head1[i].ToString());
-                        keyLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output2.WriteLine(keyLinearLayerWeights_head1[i].ToString());
-                        valueLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output2.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output3.WriteLine(valueLinearLayerWeights_head1[i].ToString());
+                        output3.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                        queryLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output4.WriteLine(queryLinearLayerWeights_head2[i].ToString());
-                        keyLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output4.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output5.WriteLine(keyLinearLayerWeights_head2[i].ToString());
-                        valueLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output5.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output6.WriteLine(valueLinearLayerWeights_head2[i].ToString());
+                        output6.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                        queryLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output7.WriteLine(queryLinearLayerWeights_head3[i].ToString());
-                        keyLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output7.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output8.WriteLine(keyLinearLayerWeights_head3[i].ToString());
-                        valueLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        output8.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head3[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output9.WriteLine(valueLinearLayerWeights_head3[i].ToString());
+                        output9.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -1943,25 +1847,25 @@ namespace Predictor
 
                     for (int i = 0; i < 75; i++)
                     {
-                        queryLinearLayerWeights_head1[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head1[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head1[i] = Convert.ToDouble(arr2[i]);
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head1[i] = Convert.ToDouble(arr2[i]);
                         predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head1[i] = Convert.ToDouble(arr3[i]);
-                        predictorGui.numOfLearnableParams++;
-
-                        queryLinearLayerWeights_head2[i] = Convert.ToDouble(arr4[i]);
-                        predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head2[i] = Convert.ToDouble(arr5[i]);
-                        predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head2[i] = Convert.ToDouble(arr6[i]);
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head1[i] = Convert.ToDouble(arr3[i]);
                         predictorGui.numOfLearnableParams++;
 
-                        queryLinearLayerWeights_head3[i] = Convert.ToDouble(arr7[i]);
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head2[i] = Convert.ToDouble(arr4[i]);
                         predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head3[i] = Convert.ToDouble(arr8[i]);
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head2[i] = Convert.ToDouble(arr5[i]);
                         predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head3[i] = Convert.ToDouble(arr9[i]);
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head2[i] = Convert.ToDouble(arr6[i]);
+                        predictorGui.numOfLearnableParams++;
+
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head3[i] = Convert.ToDouble(arr7[i]);
+                        predictorGui.numOfLearnableParams++;
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head3[i] = Convert.ToDouble(arr8[i]);
+                        predictorGui.numOfLearnableParams++;
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head3[i] = Convert.ToDouble(arr9[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -1976,9 +1880,9 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 225; i++)
                     {
-                        finalLinearLayerWeights[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].finalLinearLayerWeights[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(finalLinearLayerWeights[i].ToString());
+                        output.WriteLine(predictorGui.transStructs[0].finalLinearLayerWeights[i].ToString());
                     }
                     output.Close();
                 }
@@ -1987,7 +1891,7 @@ namespace Predictor
                     string[] arr = File.ReadAllLines(@"X:\finalLinearLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 225; i++)
                     {
-                        finalLinearLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].finalLinearLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -2018,35 +1922,35 @@ namespace Predictor
 
                     for (int i = 0; i < 75; i++)
                     {
-                        queryLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(queryLinearLayerWeights_head1[i].ToString());
-                        keyLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output2.WriteLine(keyLinearLayerWeights_head1[i].ToString());
-                        valueLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output2.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output3.WriteLine(valueLinearLayerWeights_head1[i].ToString());
+                        output3.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                        queryLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output4.WriteLine(queryLinearLayerWeights_head2[i].ToString());
-                        keyLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output4.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output5.WriteLine(keyLinearLayerWeights_head2[i].ToString());
-                        valueLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output5.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output6.WriteLine(valueLinearLayerWeights_head2[i].ToString());
+                        output6.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                        queryLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output7.WriteLine(queryLinearLayerWeights_head3[i].ToString());
-                        keyLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output7.WriteLine(predictorGui.transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output8.WriteLine(keyLinearLayerWeights_head3[i].ToString());
-                        valueLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        output8.WriteLine(predictorGui.transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head3[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output9.WriteLine(valueLinearLayerWeights_head3[i].ToString());
+                        output9.WriteLine(predictorGui.transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2081,25 +1985,25 @@ namespace Predictor
 
                     for (int i = 0; i < 75; i++)
                     {
-                        queryLinearLayerWeights_head1[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head1[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head1[i] = Convert.ToDouble(arr2[i]);
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head1[i] = Convert.ToDouble(arr2[i]);
                         predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head1[i] = Convert.ToDouble(arr3[i]);
-                        predictorGui.numOfLearnableParams++;
-
-                        queryLinearLayerWeights_head2[i] = Convert.ToDouble(arr4[i]);
-                        predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head2[i] = Convert.ToDouble(arr5[i]);
-                        predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head2[i] = Convert.ToDouble(arr6[i]);
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head1[i] = Convert.ToDouble(arr3[i]);
                         predictorGui.numOfLearnableParams++;
 
-                        queryLinearLayerWeights_head3[i] = Convert.ToDouble(arr7[i]);
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head2[i] = Convert.ToDouble(arr4[i]);
                         predictorGui.numOfLearnableParams++;
-                        keyLinearLayerWeights_head3[i] = Convert.ToDouble(arr8[i]);
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head2[i] = Convert.ToDouble(arr5[i]);
                         predictorGui.numOfLearnableParams++;
-                        valueLinearLayerWeights_head3[i] = Convert.ToDouble(arr9[i]);
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head2[i] = Convert.ToDouble(arr6[i]);
+                        predictorGui.numOfLearnableParams++;
+
+                        predictorGui.transStructs[0].queryLinearLayerWeights_head3[i] = Convert.ToDouble(arr7[i]);
+                        predictorGui.numOfLearnableParams++;
+                        predictorGui.transStructs[0].keyLinearLayerWeights_head3[i] = Convert.ToDouble(arr8[i]);
+                        predictorGui.numOfLearnableParams++;
+                        predictorGui.transStructs[0].valueLinearLayerWeights_head3[i] = Convert.ToDouble(arr9[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -2114,9 +2018,9 @@ namespace Predictor
                     StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 225; i++)
                     {
-                        finalLinearLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].finalLinearLayerWeights[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(finalLinearLayerWeights[i].ToString());
+                        output.WriteLine(predictorGui.transStructs[0].finalLinearLayerWeights[i].ToString());
                     }
                     output.Close();
                 }
@@ -2125,7 +2029,7 @@ namespace Predictor
                     string[] arr = File.ReadAllLines(@"X:\finalLinearLayerWeightsFlatFile.txt");
                     for (int i = 0; i < 225; i++)
                     {
-                        finalLinearLayerWeights[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].finalLinearLayerWeights[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -2148,9 +2052,9 @@ namespace Predictor
 
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].affineTransWeights1[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(affineTransWeights1[i].ToString());
+                        output.WriteLine(predictorGui.transStructs[0].affineTransWeights1[i].ToString());
                     }
                     output.Close();
 
@@ -2161,9 +2065,9 @@ namespace Predictor
 
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
+                        predictorGui.transStructs[0].affineTransWeights2[i] = (lower + (predictorGui.rand.NextDouble() * (upper - lower))) / (0.67 * Math.Pow(2, -0.25));
                         predictorGui.numOfLearnableParams++;
-                        output2.WriteLine(affineTransWeights2[i]);
+                        output2.WriteLine(predictorGui.transStructs[0].affineTransWeights2[i]);
                     }
                     output2.Close();
                 }
@@ -2176,9 +2080,9 @@ namespace Predictor
 
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights1[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].affineTransWeights1[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
-                        affineTransWeights2[i] = Convert.ToDouble(arr2[i]);
+                        predictorGui.transStructs[0].affineTransWeights2[i] = Convert.ToDouble(arr2[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
@@ -2201,9 +2105,9 @@ namespace Predictor
 
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].affineTransWeights1[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output.WriteLine(affineTransWeights1[i].ToString());
+                        output.WriteLine(predictorGui.transStructs[0].affineTransWeights1[i].ToString());
                     }
 
                     output.Close();
@@ -2214,9 +2118,9 @@ namespace Predictor
                     lower = -(Math.Sqrt(6.0) / Math.Sqrt(fan_in + fan_out));
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
+                        predictorGui.transStructs[0].affineTransWeights2[i] = lower + (predictorGui.rand.NextDouble() * (upper - lower));
                         predictorGui.numOfLearnableParams++;
-                        output2.WriteLine(affineTransWeights2[i]);
+                        output2.WriteLine(predictorGui.transStructs[0].affineTransWeights2[i]);
                     }
                     output2.Close();
                 }
@@ -2229,9 +2133,9 @@ namespace Predictor
 
                     for (int i = 0; i < 900; i++)
                     {
-                        affineTransWeights1[i] = Convert.ToDouble(arr[i]);
+                        predictorGui.transStructs[0].affineTransWeights1[i] = Convert.ToDouble(arr[i]);
                         predictorGui.numOfLearnableParams++;
-                        affineTransWeights2[i] = Convert.ToDouble(arr2[i]);
+                        predictorGui.transStructs[0].affineTransWeights2[i] = Convert.ToDouble(arr2[i]);
                         predictorGui.numOfLearnableParams++;
                     }
                 }
