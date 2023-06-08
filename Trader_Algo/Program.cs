@@ -877,6 +877,10 @@ error_check:
                                             algoGui.errorLineFlagRunOnce[j] = true;
                                             goto error_check;
                                         }
+                                        else
+                                        {
+                                            bids.bidsSizeArray[j] = 343;
+                                        }
                                         //algoGui.critErr = true;
                                     }
                                     sizePriceFlag = false;
@@ -904,6 +908,10 @@ error_check:
                                             algoGui.errorLineFlagRunOnce[j] = true;
                                             goto error_check;
                                         }
+                                        else
+                                        {
+                                            algoGui.critErr = true;
+                                        }
                                         //algoGui.critErr = true;
                                     }
                                 }
@@ -925,6 +933,10 @@ error_check:
                                     algoGui.errorLineFlagRunOnce[j] = true;
                                     goto error_check;
                                 }
+                                else
+                                {
+                                    algoGui.critErr = true;
+                                }
                                 dataStr = "";
                             }
                         }
@@ -943,6 +955,10 @@ error_check:
                                 algoGui.errorLineFlag[j] = false;
                                 algoGui.errorLineFlagRunOnce[j] = true;
                                 goto error_check;
+                            }
+                            else
+                            {
+                                bids.bidsSizeArray[j] = 343;
                             }
                             //algoGui.critErr = true;
                         }
@@ -1096,6 +1112,10 @@ error_check:
                                             algoGui.errorLineFlagRunOnce[j + 16] = true;
                                             goto error_check;
                                         }
+                                        else
+                                        {
+                                            asks.asksSizeArray[j] = 343;
+                                        }
                                         //algoGui.critErr = true;
                                     }
                                     sizePriceFlag = false;
@@ -1124,6 +1144,10 @@ error_check:
                                             algoGui.errorLineFlagRunOnce[j + 16] = true;
                                             goto error_check;
                                         }
+                                        else
+                                        {
+                                            algoGui.critErr = true;
+                                        }
                                     }
                                 }
                                 dataStr = "";
@@ -1144,6 +1168,10 @@ error_check:
                                     algoGui.errorLineFlagRunOnce[j + 16] = true;
                                     goto error_check;
                                 }
+                                else
+                                {
+                                    algoGui.critErr = true;
+                                }
                                 dataStr = "";
                             }
                         }
@@ -1162,6 +1190,10 @@ error_check:
                                 algoGui.errorLineFlag[j + 16] = false;
                                 algoGui.errorLineFlagRunOnce[j + 16] = true;
                                 goto error_check;
+                            }
+                            else
+                            {
+                                asks.asksSizeArray[j] = 343;
                             }
                             //algoGui.critErr = true;
                         }
