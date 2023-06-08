@@ -403,50 +403,52 @@ namespace Predictor
                 int M = 100;
                 int K = 15;
                 int N = 5;
-
+                double[] temp;
+                temp = matOps.matrixMulCpu(inputFromConvModule, queryLinearLayerWeights_head2, M, K, N);
+                Array.Copy(temp, 0, query_head2, 0, M * N);
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
-                //query matrix linear layer head 2
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights2 = queryLinearLayerWeights_head2;
-                CudaDeviceVariable<double> d_queryMat2 = new CudaDeviceVariable<double>(500);
+                ////query matrix linear layer head 2
+                //CudaDeviceVariable<double> d_in1 = inputFromConvModule;
+                //CudaDeviceVariable<double> d_queryWeights2 = queryLinearLayerWeights_head2;
+                //CudaDeviceVariable<double> d_queryMat2 = new CudaDeviceVariable<double>(500);
 
-                kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
-                kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
+                //kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
+                //kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.Run(d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
+                //kernel.Run(d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
 
-                query_head2 = d_queryMat2;
+                //query_head2 = d_queryMat2;
 
-                if (predictorGui.predictorGui1.enableOutputs.Checked == true)
-                {
-                    StreamWriter output = File.AppendText(@"X:\queryMatrix2.txt");
-                    for (int i = 0; i < 500; i++)
-                    {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head2[i].ToString());
-                    }
-                    output.Close();
+                //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
+                //{
+                //    StreamWriter output = File.AppendText(@"X:\queryMatrix2.txt");
+                //    for (int i = 0; i < 500; i++)
+                //    {
+                //        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head2[i].ToString());
+                //    }
+                //    output.Close();
 
-                    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head2.txt");
-                    for (int i = 0; i < 75; i++)
-                    {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head2[i].ToString());
-                    }
-                    linearLayerWeights.Close();
+                //    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head2.txt");
+                //    for (int i = 0; i < 75; i++)
+                //    {
+                //        linearLayerWeights.WriteLine(queryLinearLayerWeights_head2[i].ToString());
+                //    }
+                //    linearLayerWeights.Close();
 
-                    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
-                    {
-                        verify_result(M, K, N, query_head2, "query", 2);
-                    }
-                }
+                //    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
+                //    {
+                //        verify_result(M, K, N, query_head2, "   query", 2);
+                //    }
+                //}
 
-                d_in1.Dispose();
-                d_queryWeights2.Dispose();
-                d_queryMat2.Dispose();
-                //query matrix linear layer head 2 END
+                //d_in1.Dispose();
+                //d_queryWeights2.Dispose();
+                //d_queryMat2.Dispose();
+                ////query matrix linear layer head 2 END
 
-                //key matrix linear layer head 2
+                ////key matrix linear layer head 2
                 CudaDeviceVariable<double> d_in2 = inputFromConvModule;
                 CudaDeviceVariable<double> d_keyWeights2 = keyLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_keyMat2 = new CudaDeviceVariable<double>(500);
@@ -567,48 +569,50 @@ namespace Predictor
                 int M = 100;
                 int K = 15;
                 int N = 5;
-
+                double[] temp;
+                temp = matOps.matrixMulCpu(inputFromConvModule, queryLinearLayerWeights_head3, M, K, N);
+                Array.Copy(temp, 0, query_head3, 0, M * N);
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
-                //query matrix linear layer head 3
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights3 = queryLinearLayerWeights_head3;
-                CudaDeviceVariable<double> d_queryMat3 = new CudaDeviceVariable<double>(500);
+                ////query matrix linear layer head 3
+                //CudaDeviceVariable<double> d_in1 = inputFromConvModule;
+                //CudaDeviceVariable<double> d_queryWeights3 = queryLinearLayerWeights_head3;
+                //CudaDeviceVariable<double> d_queryMat3 = new CudaDeviceVariable<double>(500);
 
-                kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
-                kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
+                //kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
+                //kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.Run(d_in1.DevicePointer, d_queryWeights3.DevicePointer, d_queryMat3.DevicePointer, M, K, N);
+                //kernel.Run(d_in1.DevicePointer, d_queryWeights3.DevicePointer, d_queryMat3.DevicePointer, M, K, N);
 
-                query_head3 = d_queryMat3;
+                //query_head3 = d_queryMat3;
 
-                if (predictorGui.predictorGui1.enableOutputs.Checked == true)
-                {
-                    StreamWriter output = File.AppendText(@"X:\queryMatrix3.txt");
-                    for (int i = 0; i < 500; i++)
-                    {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head3[i].ToString());
-                    }
-                    output.Close();
+                //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
+                //{
+                //    StreamWriter output = File.AppendText(@"X:\queryMatrix3.txt");
+                //    for (int i = 0; i < 500; i++)
+                //    {
+                //        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head3[i].ToString());
+                //    }
+                //    output.Close();
 
-                    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head3.txt");
-                    for (int i = 0; i < 75; i++)
-                    {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head3[i].ToString());
-                    }
-                    linearLayerWeights.Close();
+                //    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head3.txt");
+                //    for (int i = 0; i < 75; i++)
+                //    {
+                //        linearLayerWeights.WriteLine(queryLinearLayerWeights_head3[i].ToString());
+                //    }
+                //    linearLayerWeights.Close();
 
-                    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
-                    {
-                        verify_result(M, K, N, query_head3, "query", 3);
-                    }
-                }
+                //    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
+                //    {
+                //        verify_result(M, K, N, query_head3, "query", 3);
+                //    }
+                //}
 
-                d_in1.Dispose();
-                d_queryWeights3.Dispose();
-                d_queryMat3.Dispose();
-                //query matrix linear layer head 3 END
+                //d_in1.Dispose();
+                //d_queryWeights3.Dispose();
+                //d_queryMat3.Dispose();
+                ////query matrix linear layer head 3 END
 
                 //key matrix linear layer head 3
                 CudaDeviceVariable<double> d_in2 = inputFromConvModule;
