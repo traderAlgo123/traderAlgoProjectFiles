@@ -8,14 +8,10 @@
 * Tim Prishtina, and Luke Koch.
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using System.IO;
 using ManagedCuda;
-using System.Drawing;
+using System;
+using System.IO;
+using System.Windows.Forms;
 
 namespace Predictor
 {
@@ -135,6 +131,8 @@ namespace Predictor
         public static double[] transformerBlockFinalOutputIntermediate1 = new double[1500];
         public static double[] transformerBlockFinalOutputIntermediate2 = new double[1500];
 
+        matrixOps matOps = new matrixOps();
+
         //this function requires you to input the matrix dimensions you WANT the transposed matrix to have
         //i.e. if you are transposing a 100x5 matrix you input M = 5 and K = 100 as the parameters.
         public void transposeConvKeyMat(int M, int K, int head)
@@ -234,52 +232,54 @@ namespace Predictor
 
         public void attentionHeads(int headNum)
         {
-            if(headNum == 1)
+            if (headNum == 1)
             {
                 int M = 100;
                 int K = 15;
                 int N = 5;
-
+                double[] temp;
+                temp = matOps.matrixMulCpu(inputFromConvModule, queryLinearLayerWeights_head1, M, K, N);
+                Array.Copy(temp, 0, query_head1, 0, M * N);
                 CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 1
-                CudaDeviceVariable<double> d_in1 = inputFromConvModule;
-                CudaDeviceVariable<double> d_queryWeights = queryLinearLayerWeights_head1;
-                CudaDeviceVariable<double> d_queryMat = new CudaDeviceVariable<double>(500);
+                //CudaDeviceVariable<double> d_in1 = inputFromConvModule;
+                //CudaDeviceVariable<double> d_queryWeights = queryLinearLayerWeights_head1;
+                //CudaDeviceVariable<double> d_queryMat = new CudaDeviceVariable<double>(500);
 
-                kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
-                kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
+                //kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
+                //kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.Run(d_in1.DevicePointer, d_queryWeights.DevicePointer, d_queryMat.DevicePointer, M, K, N);
+                //kernel.Run(d_in1.DevicePointer, d_queryWeights.DevicePointer, d_queryMat.DevicePointer, M, K, N);
 
-                query_head1 = d_queryMat;
+                //query_head1 = d_queryMat;
 
-                if (predictorGui.predictorGui1.enableOutputs.Checked == true)
-                {
-                    StreamWriter output = File.AppendText(@"X:\queryMatrix1.txt");
-                    for (int i = 0; i < 500; i++)
-                    {
-                        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head1[i].ToString());
-                    }
-                    output.Close();
+                //if (predictorGui.predictorGui1.enableOutputs.Checked == true)
+                //{
+                //    StreamWriter output = File.AppendText(@"X:\queryMatrix1.txt");
+                //    for (int i = 0; i < 500; i++)
+                //    {
+                //        output.WriteLine("Query Matrix[" + i.ToString() + "] = " + query_head1[i].ToString());
+                //    }
+                //    output.Close();
 
-                    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head1.txt");
-                    for (int i = 0; i < 75; i++)
-                    {
-                        linearLayerWeights.WriteLine(queryLinearLayerWeights_head1[i].ToString());
-                    }
-                    linearLayerWeights.Close();
+                //    StreamWriter linearLayerWeights = File.AppendText(@"X:\querylinearLayerWeights_head1.txt");
+                //    for (int i = 0; i < 75; i++)
+                //    {
+                //        linearLayerWeights.WriteLine(queryLinearLayerWeights_head1[i].ToString());
+                //    }
+                //    linearLayerWeights.Close();
 
-                    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
-                    {
-                        verify_result(M, K, N, query_head1, "query", 1);
-                    }
-                }
+                //    if (predictorGui.predictorGui1.confirmCPU.Checked == true)
+                //    {
+                //        verify_result(M, K, N, query_head1, "query", 1);
+                //    }
+                //}
 
-                d_in1.Dispose();
-                d_queryWeights.Dispose();
-                d_queryMat.Dispose();
+                //d_in1.Dispose();
+                //d_queryWeights.Dispose();
+                //d_queryMat.Dispose();
                 //query matrix linear layer head 1 END
 
                 //key matrix linear layer head 1
@@ -415,7 +415,7 @@ namespace Predictor
                 kernel.GridDimensions = new ManagedCuda.VectorTypes.dim3((K + 2048 - 1) / 32, (M + 2048 - 1) / 32);
                 kernel.BlockDimensions = new ManagedCuda.VectorTypes.dim3(32, 32);
 
-                kernel.Run( d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
+                kernel.Run(d_in1.DevicePointer, d_queryWeights2.DevicePointer, d_queryMat2.DevicePointer, M, K, N);
 
                 query_head2 = d_queryMat2;
 
@@ -952,7 +952,7 @@ namespace Predictor
         {
             if (pass == 1)
             {
-                
+
                 //formula to be used is sin(pos/10000^((2 * i) / d)
                 double pos = 0;
                 double i = 0;
@@ -1053,11 +1053,11 @@ namespace Predictor
             double[] mask = new double[99];
             int sumIdx = 0;
 
-            for(int i = 0; i < 99; i++)
+            for (int i = 0; i < 99; i++)
             {
                 mask[i] = Double.NegativeInfinity;
             }
-         
+
             //apply scaling
             for (int i = 0; i < 10000; i++)
             {
@@ -1101,7 +1101,7 @@ namespace Predictor
                 destIdx += 101;
                 len--;
             }
-            
+
             //find exponential summation for each row for use with softmax function
             for (int i = 0; i < 10000; i++)
             {
@@ -1113,17 +1113,17 @@ namespace Predictor
                 exp_summation2[sumIdx] += Math.Exp(attention_filter_head2[i]);
                 exp_summation3[sumIdx] += Math.Exp(attention_filter_head3[i]);
             }
-            if(predictorGui.predictorGui1.enableOutputs.Checked == true)
+            if (predictorGui.predictorGui1.enableOutputs.Checked == true)
             {
                 StreamWriter output = File.AppendText(@"X:\exp_summation1.txt");
-                for(int i = 0; i < 100; i++)
+                for (int i = 0; i < 100; i++)
                 {
                     output.WriteLine(exp_summation1[i].ToString());
                 }
                 output.Close();
             }
             sumIdx = 0;
-            for(int i = 0; i < 10000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 if (i % 100 == 0 && i != 0)
                 {
@@ -1179,10 +1179,10 @@ namespace Predictor
 
                 filtered_value_head1 = d_filteredValMat;
 
-                if(predictorGui.predictorGui1.enableOutputs.Checked == true)
+                if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
                     StreamWriter output = File.AppendText(@"X:\filteredValMat1.txt");
-                    for(int i = 0; i < 500; i++)
+                    for (int i = 0; i < 500; i++)
                     {
                         output.WriteLine("Filtered Value Matrix[" + i.ToString() + "] = " + filtered_value_head1[i].ToString());
                     }
@@ -1305,9 +1305,9 @@ namespace Predictor
         {
             int concatIdx = 0;
             int j = 0;
-            for(int i = 0; i < 1500; i++)
+            for (int i = 0; i < 1500; i++)
             {
-                if(concatIdx < 5)
+                if (concatIdx < 5)
                 {
                     concatenatedFilteredValueMatrix[i] = filtered_value_head1[j];
                     if (j % 4 == 0 && j != 0)
@@ -1319,7 +1319,7 @@ namespace Predictor
                         j++;
                     }
                 }
-                else if(concatIdx >= 5 && concatIdx < 10)
+                else if (concatIdx >= 5 && concatIdx < 10)
                 {
                     concatenatedFilteredValueMatrix[i] = filtered_value_head2[j];
                     if (j % 4 == 0 && j != 0)
@@ -1331,7 +1331,7 @@ namespace Predictor
                         j++;
                     }
                 }
-                else if(concatIdx >= 10 && concatIdx < 15)
+                else if (concatIdx >= 10 && concatIdx < 15)
                 {
                     concatenatedFilteredValueMatrix[i] = filtered_value_head3[j];
                     if (concatIdx == 14)
@@ -1727,7 +1727,7 @@ namespace Predictor
 
         public void transformerMLP_add_bias_to_output()
         {
-            for(int i = 0; i < 1500; i++)
+            for (int i = 0; i < 1500; i++)
             {
                 transformerBlockFinalOutput[i] += transMLPSecondLayerBias[i];
             }
@@ -1756,7 +1756,7 @@ namespace Predictor
                     predictorGui.numOfLearnableParams++;
                 }
             }
-            if(!File.Exists(@"X:\affineMLPSecondLayerBiasesFlatFile.txt"))
+            if (!File.Exists(@"X:\affineMLPSecondLayerBiasesFlatFile.txt"))
             {
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
@@ -1771,7 +1771,7 @@ namespace Predictor
             {
                 string[] arr;
                 arr = File.ReadAllLines(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
-                for(int i = 0; i < 1500; i++)
+                for (int i = 0; i < 1500; i++)
                 {
                     transMLPSecondLayerBias[i] = Convert.ToDouble(arr[i]);
                     predictorGui.numOfLearnableParams++;
