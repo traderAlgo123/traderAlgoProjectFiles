@@ -86,6 +86,19 @@ namespace Predictor
             return result;
         }
 
+        public double[] transposeMatCpu(double[] inArray, int M, int K)
+        {
+            double[] result = new double[M * K];
+            Parallel.For(0, K, (i, state) =>
+            {
+                Parallel.For(0, M, (j, state2) =>
+                {
+                    result[j * K + i] = inArray[i * M + j];
+                });
+            });
+            return result;
+        }
+
         public double[] conv5KernelBackProp(double[] prevConvLayerOut, double[] derivative, int startIdx, bool depth1)
         {
             double[] temp;

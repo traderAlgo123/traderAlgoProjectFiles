@@ -37,7 +37,7 @@ namespace Predictor
 
     public class Transformer_Implementation
     {
-        
+        matrixOps matOps = new matrixOps();
 
         //this function requires you to input the matrix dimensions you WANT the transposed matrix to have
         //i.e. if you are transposing a 100x5 matrix you input M = 5 and K = 100 as the parameters.
@@ -144,7 +144,7 @@ namespace Predictor
                 int K = 15;
                 int N = 5;
 
-                CudaContext ctx = new CudaContext(predictorGui.selectGpu);
+                /*CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 1
@@ -183,11 +183,14 @@ namespace Predictor
 
                 d_in1.Dispose();
                 d_queryWeights.Dispose();
-                d_queryMat.Dispose();
+                d_queryMat.Dispose();*/
+                double[] temp;
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].queryLinearLayerWeights_head1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].query_head1, 0, M * N);
                 //query matrix linear layer head 1 END
 
                 //key matrix linear layer head 1
-                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_keyWeights = predictorGui.transStructs[0].keyLinearLayerWeights_head1;
                 CudaDeviceVariable<double> d_keyMat = new CudaDeviceVariable<double>(500);
 
@@ -222,11 +225,13 @@ namespace Predictor
 
                 d_in2.Dispose();
                 d_keyWeights.Dispose();
-                d_keyMat.Dispose();
+                d_keyMat.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].keyLinearLayerWeights_head1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].key_head1, 0, M * N);
                 //key matrix linear layer head 1 END
 
                 //value matrix linear layer head 1
-                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_valueWeights = predictorGui.transStructs[0].valueLinearLayerWeights_head1;
                 CudaDeviceVariable<double> d_valueMat = new CudaDeviceVariable<double>(500);
 
@@ -262,7 +267,9 @@ namespace Predictor
 
                 d_in3.Dispose();
                 d_valueWeights.Dispose();
-                d_valueMat.Dispose();
+                d_valueMat.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].valueLinearLayerWeights_head1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].value_head1, 0, M * N);
 
                 //multiply query and key matrices together
                 M = 100;
@@ -271,7 +278,7 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 1);
 
-                CudaDeviceVariable<double> d_query = predictorGui.transStructs[0].query_head1;
+                /*CudaDeviceVariable<double> d_query = predictorGui.transStructs[0].query_head1;
                 CudaDeviceVariable<double> d_key = predictorGui.transStructs[0].key_head1;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head1 = new CudaDeviceVariable<double>(10000);
 
@@ -300,7 +307,9 @@ namespace Predictor
                 d_key.Dispose();
                 d_preliminary_attention_filter_head1.Dispose();
                 ctx.UnloadKernel(kernel);
-                ctx.Dispose();
+                ctx.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].query_head1, predictorGui.transStructs[0].key_head1, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].attention_filter_head1, 0, M * N);
             }
             else if (headNum == 2)
             {
@@ -308,7 +317,7 @@ namespace Predictor
                 int K = 15;
                 int N = 5;
 
-                CudaContext ctx = new CudaContext(predictorGui.selectGpu);
+                /*CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 2
@@ -347,11 +356,14 @@ namespace Predictor
 
                 d_in1.Dispose();
                 d_queryWeights2.Dispose();
-                d_queryMat2.Dispose();
+                d_queryMat2.Dispose();*/
+                double[] temp;
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].queryLinearLayerWeights_head2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].query_head2, 0, M * N);
                 //query matrix linear layer head 2 END
 
                 //key matrix linear layer head 2
-                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_keyWeights2 = predictorGui.transStructs[0].keyLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_keyMat2 = new CudaDeviceVariable<double>(500);
 
@@ -386,11 +398,13 @@ namespace Predictor
 
                 d_in2.Dispose();
                 d_keyWeights2.Dispose();
-                d_keyMat2.Dispose();
+                d_keyMat2.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].keyLinearLayerWeights_head2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].key_head2, 0, M * N);
                 //key matrix linear layer head 2 END
 
                 //value matrix linear layer head 2
-                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_valueWeights2 = predictorGui.transStructs[0].valueLinearLayerWeights_head2;
                 CudaDeviceVariable<double> d_valueMat2 = new CudaDeviceVariable<double>(500);
 
@@ -426,7 +440,9 @@ namespace Predictor
 
                 d_in3.Dispose();
                 d_valueWeights2.Dispose();
-                d_valueMat2.Dispose();
+                d_valueMat2.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].valueLinearLayerWeights_head2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].value_head2, 0, M * N);
 
                 //multiply query and key matrices together
                 M = 100;
@@ -435,7 +451,7 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 2);
 
-                CudaDeviceVariable<double> d_query2 = predictorGui.transStructs[0].query_head2;
+                /*CudaDeviceVariable<double> d_query2 = predictorGui.transStructs[0].query_head2;
                 CudaDeviceVariable<double> d_key2 = predictorGui.transStructs[0].key_head2;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head2 = new CudaDeviceVariable<double>(10000);
 
@@ -464,7 +480,9 @@ namespace Predictor
                 d_key2.Dispose();
                 d_preliminary_attention_filter_head2.Dispose();
                 ctx.UnloadKernel(kernel);
-                ctx.Dispose();
+                ctx.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].query_head2, predictorGui.transStructs[0].key_head2, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].attention_filter_head2, 0, M * N);
             }
             else if (headNum == 3)
             {
@@ -472,7 +490,7 @@ namespace Predictor
                 int K = 15;
                 int N = 5;
 
-                CudaContext ctx = new CudaContext(predictorGui.selectGpu);
+                /*CudaContext ctx = new CudaContext(predictorGui.selectGpu);
                 CudaKernel kernel = ctx.LoadKernel("matMul.ptx", "matrixMul");
 
                 //query matrix linear layer head 3
@@ -511,11 +529,14 @@ namespace Predictor
 
                 d_in1.Dispose();
                 d_queryWeights3.Dispose();
-                d_queryMat3.Dispose();
+                d_queryMat3.Dispose();*/
+                double[] temp;
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].queryLinearLayerWeights_head3, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].query_head3, 0, M * N);
                 //query matrix linear layer head 3 END
 
                 //key matrix linear layer head 3
-                CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in2 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_keyWeights3 = predictorGui.transStructs[0].keyLinearLayerWeights_head3;
                 CudaDeviceVariable<double> d_keyMat3 = new CudaDeviceVariable<double>(500);
 
@@ -550,11 +571,13 @@ namespace Predictor
 
                 d_in2.Dispose();
                 d_keyWeights3.Dispose();
-                d_keyMat3.Dispose();
+                d_keyMat3.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].keyLinearLayerWeights_head3, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].key_head3, 0, M * N);
                 //key matrix linear layer head 3 END
 
                 //value matrix linear layer head 3
-                CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
+                /*CudaDeviceVariable<double> d_in3 = predictorGui.transStructs[0].inputFromConvModule;
                 CudaDeviceVariable<double> d_valueWeights3 = predictorGui.transStructs[0].valueLinearLayerWeights_head3;
                 CudaDeviceVariable<double> d_valueMat3 = new CudaDeviceVariable<double>(500);
 
@@ -590,7 +613,9 @@ namespace Predictor
 
                 d_in3.Dispose();
                 d_valueWeights3.Dispose();
-                d_valueMat3.Dispose();
+                d_valueMat3.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].inputFromConvModule, predictorGui.transStructs[0].valueLinearLayerWeights_head3, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].value_head3, 0, M * N);
 
                 //multiply query and key matrices together
                 M = 100;
@@ -599,7 +624,7 @@ namespace Predictor
 
                 transposeConvKeyMat(5, 100, 3);
 
-                CudaDeviceVariable<double> d_query3 = predictorGui.transStructs[0].query_head3;
+                /*CudaDeviceVariable<double> d_query3 = predictorGui.transStructs[0].query_head3;
                 CudaDeviceVariable<double> d_key3 = predictorGui.transStructs[0].key_head3;
                 CudaDeviceVariable<double> d_preliminary_attention_filter_head3 = new CudaDeviceVariable<double>(10000);
 
@@ -628,7 +653,9 @@ namespace Predictor
                 d_key3.Dispose();
                 d_preliminary_attention_filter_head3.Dispose();
                 ctx.UnloadKernel(kernel);
-                ctx.Dispose();
+                ctx.Dispose();*/
+                temp = matOps.matrixMulCpu(predictorGui.transStructs[0].query_head3, predictorGui.transStructs[0].key_head3, M, K, N);
+                Array.Copy(temp, 0, predictorGui.transStructs[0].attention_filter_head3, 0, M * N);
             }
         }
 

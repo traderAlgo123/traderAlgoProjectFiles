@@ -201,6 +201,50 @@ namespace Data_Scraper
                 }
             }
 
+            public Bitmap threshold(Bitmap image)
+            {
+                using (image)
+                {
+                    Bitmap filteredImage = new Bitmap(image.Width, image.Height);
+                    BitmapData srcData = image.LockBits(new Rectangle(0, 0, image.Width, image.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                    BitmapData dstData = filteredImage.LockBits(new Rectangle(0, 0, image.Width, image.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+
+                    unsafe
+                    {
+                        byte* dstPointer = (byte*)dstData.Scan0;
+                        byte* srcPointer = (byte*)srcData.Scan0;
+
+                        for (Int32 y = 0; y < image.Height; y++)
+                        {
+                            for (Int32 x = 0; x < image.Width; x++)
+                            {
+                                Color c = Color.FromArgb(srcPointer[3], srcPointer[2], srcPointer[1]);
+
+                                if (c.R > 180 && c.G > 180 && c.B > 180)
+                                {
+                                    //filteredImage.SetPixel(x, y, Color.Black);
+                                    dstPointer[0] = 255;
+                                    dstPointer[1] = 255;
+                                    dstPointer[2] = 255;
+                                    dstPointer[3] = 255;
+
+                                    srcPointer += 4;
+                                    dstPointer += 4;
+                                }
+                                else
+                                {
+                                    srcPointer += 4;
+                                    dstPointer += 4;
+                                }
+                            }
+                        }
+                        filteredImage.UnlockBits(dstData);
+                        image.UnlockBits(srcData);
+                        return filteredImage;
+                    }
+                }
+            }
+
             public Bitmap blackWhiteFilterLastTrades(Bitmap image)
             {
                 Bitmap filteredLine = new Bitmap(image.Width + 400, image.Height);
@@ -686,10 +730,13 @@ namespace Data_Scraper
                         size.Width = 3; //9
                         Cv2.MedianBlur(gs_img, filtered, 3); //last param 9
                         Cv2.GaussianBlur(filtered, filtered, size, 0, 0, BorderTypes.Default);
+                        Cv2.Dilate(filtered, filtered, new Mat(), null, 1, BorderTypes.Constant, null);
+                        Cv2.Erode(filtered, filtered, new Mat(), null, 1, BorderTypes.Constant, null);
                         using (var ms = filtered.ToMemoryStream())
                         {
                             bidsSplitArray[i] = (Bitmap)etradeWinCap.FixedSize(Image.FromStream(ms), bidsSplitArray[i].Width, bidsSplitArray[i].Height + 50);
-                            //bidsSplitArray[i] = etradeWinCap.Sharpen(bidsSplitArray[i], bidsSplitArray[i].Width, bidsSplitArray[i].Height);
+                            //bidsSplitArray[i] = etradeWinCap.Sharpen(bidsSplitArray[i]);
+                            //bidsSplitArray[i] = threshold(bidsSplitArray[i]);
                             bidsSplitArray[i].Save(("X://bidsLine" + i + ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
                         }
                     });
@@ -717,10 +764,13 @@ namespace Data_Scraper
                         size.Width = 3; //9
                         Cv2.MedianBlur(gs_img, filtered, 3); //last param 9
                         Cv2.GaussianBlur(filtered, filtered, size, 0, 0, BorderTypes.Default);
+                        Cv2.Dilate(filtered, filtered, new Mat(), null, 1, BorderTypes.Constant, null);
+                        Cv2.Erode(filtered, filtered, new Mat(), null, 1, BorderTypes.Constant, null);
                         using (var ms = filtered.ToMemoryStream())
                         {
                             asksSplitArray[i] = (Bitmap)etradeWinCap2.FixedSize(Image.FromStream(ms), asksSplitArray[i].Width, asksSplitArray[i].Height + 50);
-                            //asksSplitArray[i] = etradeWinCap2.Sharpen(asksSplitArray[i], asksSplitArray[i].Width, asksSplitArray[i].Height);
+                            //asksSplitArray[i] = etradeWinCap2.Sharpen(asksSplitArray[i]);
+                            //asksSplitArray[i] = threshold(asksSplitArray[i]);
                             asksSplitArray[i].Save(("X://asksLine" + i + ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
                         }
                     });
