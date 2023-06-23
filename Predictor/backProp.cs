@@ -4827,6 +4827,8 @@ namespace Predictor
             ArrayList normSize = new ArrayList();
             string[] arr2;
             string[] arr3;
+            double maxOfEntireDayPrices = 0;
+            double maxOfEntireDaySizes = 0;
             double meanOfPrices = 0;
             double meanOfSizes = 0;
             double stdPrices = 0;
@@ -4858,6 +4860,14 @@ namespace Predictor
                     {
                         meanOfPrices += Convert.ToDouble(arr2[j]) / arr2.Length;
                         meanOfSizes += Convert.ToDouble(arr3[j]) / arr3.Length;
+                        if(Convert.ToDouble(arr2[j]) >= maxOfEntireDayPrices)
+                        {
+                            maxOfEntireDayPrices = Convert.ToDouble(arr2[j]);
+                        }
+                        if(Convert.ToDouble(arr3[j]) >= maxOfEntireDaySizes)
+                        {
+                            maxOfEntireDaySizes = Convert.ToDouble(arr3[j]);
+                        }
                     }
                     for (int k = 0; k < arr2.Length; k++)
                     {
@@ -4888,6 +4898,13 @@ namespace Predictor
                     }
                 }
             }
+
+            priceSet.Add(maxOfEntireDayPrices);
+            sizeSet.Add(maxOfEntireDaySizes);
+            StreamWriter maxValOut = File.AppendText(@"X:\maxPriceAndSizeEntireDay.txt");
+            maxValOut.WriteLine(maxOfEntireDayPrices);
+            maxValOut.WriteLine(maxOfEntireDaySizes);
+            maxValOut.Close();
 
             if (!File.Exists(@"X:\min_max_scaling_values.txt"))
             {
