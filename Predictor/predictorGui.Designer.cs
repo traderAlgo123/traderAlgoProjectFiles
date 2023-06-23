@@ -110,7 +110,10 @@
             this.label33 = new System.Windows.Forms.Label();
             this.posEncodingGraphic = new System.Windows.Forms.PictureBox();
             this.tabPage4 = new System.Windows.Forms.TabPage();
+            this.label41 = new System.Windows.Forms.Label();
+            this.changePercentIgnored = new System.Windows.Forms.Button();
             this.usingUnderUp = new System.Windows.Forms.CheckBox();
+            this.percentIgnoredText = new System.Windows.Forms.TextBox();
             this.finalMLPPanel = new System.Windows.Forms.Panel();
             this.preluSelectFinalMLP = new System.Windows.Forms.RadioButton();
             this.label35 = new System.Windows.Forms.Label();
@@ -148,9 +151,7 @@
             this.roundTo3 = new System.Windows.Forms.RadioButton();
             this.roundTo4 = new System.Windows.Forms.RadioButton();
             this.gifActivate = new System.Windows.Forms.CheckBox();
-            this.label41 = new System.Windows.Forms.Label();
-            this.changePercentIgnored = new System.Windows.Forms.Button();
-            this.percentIgnoredText = new System.Windows.Forms.TextBox();
+            this.ignoreUpEx = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.transformer_gif)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.attentionFilter1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.attentionFilter2)).BeginInit();
@@ -952,6 +953,7 @@
             // 
             // tabPage4
             // 
+            this.tabPage4.Controls.Add(this.ignoreUpEx);
             this.tabPage4.Controls.Add(this.label41);
             this.tabPage4.Controls.Add(this.changePercentIgnored);
             this.tabPage4.Controls.Add(this.usingUnderUp);
@@ -971,6 +973,25 @@
             this.tabPage4.Text = "Network Arch Options";
             this.tabPage4.UseVisualStyleBackColor = true;
             // 
+            // label41
+            // 
+            this.label41.AutoSize = true;
+            this.label41.Location = new System.Drawing.Point(265, 120);
+            this.label41.Name = "label41";
+            this.label41.Size = new System.Drawing.Size(186, 13);
+            this.label41.TabIndex = 64;
+            this.label41.Text = "Percentage of Flat examples Ignored: ";
+            // 
+            // changePercentIgnored
+            // 
+            this.changePercentIgnored.Location = new System.Drawing.Point(526, 117);
+            this.changePercentIgnored.Name = "changePercentIgnored";
+            this.changePercentIgnored.Size = new System.Drawing.Size(61, 20);
+            this.changePercentIgnored.TabIndex = 63;
+            this.changePercentIgnored.Text = "Enter";
+            this.changePercentIgnored.UseVisualStyleBackColor = true;
+            this.changePercentIgnored.Click += new System.EventHandler(this.changePercentIgnored_Click);
+            // 
             // usingUnderUp
             // 
             this.usingUnderUp.AutoSize = true;
@@ -980,6 +1001,13 @@
             this.usingUnderUp.TabIndex = 10;
             this.usingUnderUp.Text = "Using Under UP Training Data";
             this.usingUnderUp.UseVisualStyleBackColor = true;
+            // 
+            // percentIgnoredText
+            // 
+            this.percentIgnoredText.Location = new System.Drawing.Point(478, 117);
+            this.percentIgnoredText.Name = "percentIgnoredText";
+            this.percentIgnoredText.Size = new System.Drawing.Size(42, 20);
+            this.percentIgnoredText.TabIndex = 62;
             // 
             // finalMLPPanel
             // 
@@ -1454,31 +1482,15 @@
             this.gifActivate.Text = "GIF Activate";
             this.gifActivate.UseVisualStyleBackColor = true;
             // 
-            // label41
+            // ignoreUpEx
             // 
-            this.label41.AutoSize = true;
-            this.label41.Location = new System.Drawing.Point(265, 120);
-            this.label41.Name = "label41";
-            this.label41.Size = new System.Drawing.Size(186, 13);
-            this.label41.TabIndex = 64;
-            this.label41.Text = "Percentage of Flat examples Ignored: ";
-            // 
-            // changePercentIgnored
-            // 
-            this.changePercentIgnored.Location = new System.Drawing.Point(526, 117);
-            this.changePercentIgnored.Name = "changePercentIgnored";
-            this.changePercentIgnored.Size = new System.Drawing.Size(61, 20);
-            this.changePercentIgnored.TabIndex = 63;
-            this.changePercentIgnored.Text = "Enter";
-            this.changePercentIgnored.UseVisualStyleBackColor = true;
-            this.changePercentIgnored.Click += new System.EventHandler(this.changePercentIgnored_Click);
-            // 
-            // percentIgnoredText
-            // 
-            this.percentIgnoredText.Location = new System.Drawing.Point(478, 117);
-            this.percentIgnoredText.Name = "percentIgnoredText";
-            this.percentIgnoredText.Size = new System.Drawing.Size(42, 20);
-            this.percentIgnoredText.TabIndex = 62;
+            this.ignoreUpEx.AutoSize = true;
+            this.ignoreUpEx.Location = new System.Drawing.Point(268, 146);
+            this.ignoreUpEx.Name = "ignoreUpEx";
+            this.ignoreUpEx.Size = new System.Drawing.Size(121, 17);
+            this.ignoreUpEx.TabIndex = 65;
+            this.ignoreUpEx.Text = "Ignore UP examples";
+            this.ignoreUpEx.UseVisualStyleBackColor = true;
             // 
             // predictorGui
             // 
@@ -1700,6 +1712,7 @@
         private System.Windows.Forms.Label label41;
         private System.Windows.Forms.Button changePercentIgnored;
         private System.Windows.Forms.TextBox percentIgnoredText;
+        private System.Windows.Forms.CheckBox ignoreUpEx;
     }
 }
 

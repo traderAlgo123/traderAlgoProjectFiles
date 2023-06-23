@@ -400,7 +400,7 @@ namespace Predictor
                             flatExCaptureFlag = true;
                         }
 
-                        if (backProp.actualOutcomes[0] == 1 || backProp.actualOutcomes[2] == 1)
+                        if ((predictorGui1.ignoreUpEx.Checked == false && backProp.actualOutcomes[0] == 1) || backProp.actualOutcomes[2] == 1)
                         {
                             backProp.buildTrainingDataExamples(exampleIdx, prevTensorIn);
                             upOrDownIdx++;
@@ -468,7 +468,7 @@ namespace Predictor
                             flatExCaptureFlag = true;
                         }
 
-                        if (backProp.actualOutcomes[0] == 1 || backProp.actualOutcomes[2] == 1)
+                        if ((predictorGui1.ignoreUpEx.Checked == false && backProp.actualOutcomes[0] == 1) || backProp.actualOutcomes[2] == 1)
                         {
                             backProp.buildTrainingDataExamples(exampleIdx, prevTensorIn);
                             upOrDownIdx++;
