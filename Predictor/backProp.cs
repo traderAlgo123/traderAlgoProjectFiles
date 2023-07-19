@@ -1927,7 +1927,7 @@ namespace Predictor
 
             if (predictorGui.predictorGui1.activateTraining.Checked == true)
             {
-                Array.Copy(predictorGui.mlpStructs[0].secondLayerOut, 0, predicted, 0, 3);
+                Array.Copy(predictorGui.networkArray[0].mlpStructs[0].secondLayerOut, 0, predicted, 0, 3);
                 Array.Copy(actualOutcomes, 0, expected, 0, 3);
             }
             else
@@ -1968,6 +1968,38 @@ namespace Predictor
             }
         }
 
+        public void cross_entropy_loss_per_Ex_GA(int networkNum, int exampleNum)
+        {
+            double[] predicted = new double[3];
+            double[] expected = new double[3];
+
+            double cross_entropy = 0.0;
+
+            if (predictorGui.predictorGui1.activateTraining.Checked == true)
+            {
+                Array.Copy(predictorGui.networkArray[networkNum].mlpStructs[exampleNum].secondLayerOut, 0, predicted, 0, 3);
+                Array.Copy(predictorGui.exampleArray[exampleNum].actualOutcomes, 0, expected, 0, 3);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                /*
+                if(expected[i] == 0.0F)
+                {
+                    expected[i] = (epsilon * 1000000) / (3.0 - 1.0);
+                }
+                else
+                {
+                    expected[i] = 1.0 - (epsilon * 1000000);
+                }
+                */
+                cross_entropy += -expected[i] * (Math.Log(predicted[i]));
+            }
+
+
+            predictorGui.networkArray[networkNum].mlpStructs[exampleNum].cross_entropy_loss_per_example = cross_entropy;
+        }
+
         public void affineMLPCalculateAdjustments(int blockNum)
         {
             double[] temp;
@@ -1977,7 +2009,7 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(predictorGui.mlpStructs[0].firstLayerWeights, M, K);
+                temp = matOps.transposeMat(predictorGui.networkArray[0].mlpStructs[0].firstLayerWeights, M, K);
                 Array.Copy(temp, 0, firstLayerWeightsTransposed, 0, 96000);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -2122,7 +2154,7 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(predictorGui.transStructs[0].affineIntermediateRes2, M, K);
+                temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2, M, K);
                 Array.Copy(temp, 0, affineIntermediateRes2Transposed, 0, 6000);
 
                 //we then multiply the matrices together to get the delta for the second block second pass affine transform
@@ -2145,7 +2177,7 @@ namespace Predictor
             }
             else
             {
-                temp = matOps.transposeMat(predictorGui.transStructs[0].affineIntermediateRes, M, K);
+                temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes, M, K);
                 Array.Copy(temp, 0, affineIntermediateRes1Transposed, 0, 6000);
 
                 //we then multiply the matrices together to get the delta for the second block second pass affine transform
@@ -2172,7 +2204,7 @@ namespace Predictor
             //first transpose affineTransWeights4 by calling library transposeMat func
             M = 15;
             K = 60;
-            temp = matOps.transposeMat(predictorGui.transStructs[0].affineTransWeights2, M, K);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].affineTransWeights2, M, K);
             Array.Copy(temp, 0, affineTrans2WeightsTransposed, 0, 900);
 
             //then we multiply the error matrix from earlier to this transposed weight matrix
@@ -2208,12 +2240,12 @@ namespace Predictor
 
             if (blockNum == 2)
             {
-                temp = matOps.transposeMat(predictorGui.transStructs[0].residualConnectionOutputNorm, M, K);
+                temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].residualConnectionOutputNorm, M, K);
                 Array.Copy(temp, 0, residualConnectionOutputNorm2Transposed, 0, 1500);
             }
             else
             {
-                temp = matOps.transposeMat(predictorGui.transStructs[0].residualConnectionOutputNormCpy, M, K);
+                temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].residualConnectionOutputNormCpy, M, K);
                 Array.Copy(temp, 0, residualConnectionOutputNorm1Transposed, 0, 1500);
             }
 
@@ -2278,7 +2310,7 @@ namespace Predictor
 
             //we calculate the error of the previous layer before the affine transformation MLP by multiplying
             //the transpose of affineTransWeights1 with the error matrix from earlier to get the error of the output of attention block
-            temp = matOps.transposeMat(predictorGui.transStructs[0].affineTransWeights1, M, K);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].affineTransWeights1, M, K);
             Array.Copy(temp, 0, affineTrans1WeightsTransposed, 0, 900);
 
             //do multiplication to find next error matrix
@@ -2457,7 +2489,7 @@ namespace Predictor
 
             //we calculate the error of the concatenated filtered value matrix by taking the transpose of the final linear layer weight matrix
             //and multiplying the final output with the final output of the attention head
-            temp = matOps.transposeMat(predictorGui.transStructs[0].finalLinearLayerWeights, M, K);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].finalLinearLayerWeights, M, K);
             Array.Copy(temp, 0, finalLinearLayerWeightsTransposed, 0, 225);
 
             M = 100;
@@ -2556,7 +2588,7 @@ namespace Predictor
             int N = 5;
             double scaleVal = Math.Sqrt(5);
 
-            temp = matOps.transposeMat(predictorGui.transStructs[0].inputFromConvModule, M, K);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].inputFromConvModule, M, K);
             Array.Copy(temp, 0, inputFromConvModuleTransposed, 0, 1500);
 
             Parallel.For(1, 4, (j, state) =>
@@ -2564,13 +2596,13 @@ namespace Predictor
                 //find softmax derivative for attention filters
                 if (j == 1)
                 {
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head1, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].attention_filter_head1, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans1, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans1, deconcatMat1, 100, 100, 5);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head1, deconcatMat1, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].attention_filter_head1, deconcatMat1, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead1Err, 0, 500);
 
-                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head1);
+                    temp = softmax_derivative(predictorGui.networkArray[0].transStructs[0].attention_filter_head1);
                     Array.Copy(temp, 0, attention_filter_head1_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head1_der, 100, 100);
@@ -2578,21 +2610,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat1, 5, 100);
                     Array.Copy(temp, 0, deconcatMat1, 0, 500);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, deconcatMat1, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head1, deconcatMat1, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head1, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat1, 100, 5);
                     Array.Copy(temp, 0, deconcatMat1, 0, 500);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head1, 5, 100);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head1, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat1, predictorGui.transStructs[0].value_head1, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head1, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head1, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat1, predictorGui.networkArray[0].transStructs[0].value_head1, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head1, 0, 10000);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head1, 100, 5);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head1, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head1, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head1, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        predictorGui.transStructs[0].query_head1[i] /= scaleVal;
-                        predictorGui.transStructs[0].key_head1[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].query_head1[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].key_head1[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2602,11 +2634,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head1_trans, scores_query_gradient_head1, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head1, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head1, predictorGui.transStructs[0].key_head1, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head1, predictorGui.networkArray[0].transStructs[0].key_head1, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead1Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head1_der, scores_key_gradient_head1, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head1, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head1, predictorGui.transStructs[0].query_head1, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head1, predictorGui.networkArray[0].transStructs[0].query_head1, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead1Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead1Err, M, K, N);
@@ -2618,13 +2650,13 @@ namespace Predictor
                 }
                 else if (j == 2)
                 {
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head2, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].attention_filter_head2, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans2, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans2, deconcatMat2, 100, 100, 5);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head2, deconcatMat2, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].attention_filter_head2, deconcatMat2, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead2Err, 0, 500);
 
-                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head2);
+                    temp = softmax_derivative(predictorGui.networkArray[0].transStructs[0].attention_filter_head2);
                     Array.Copy(temp, 0, attention_filter_head2_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head2_der, 100, 100);
@@ -2632,21 +2664,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat2, 5, 100);
                     Array.Copy(temp, 0, deconcatMat2, 0, 500);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, deconcatMat2, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head2, deconcatMat2, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head2, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat2, 100, 5);
                     Array.Copy(temp, 0, deconcatMat2, 0, 500);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head2, 5, 100);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head2, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat2, predictorGui.transStructs[0].value_head2, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head2, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head2, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat2, predictorGui.networkArray[0].transStructs[0].value_head2, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head2, 0, 10000);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head2, 100, 5);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head2, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head2, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head2, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        predictorGui.transStructs[0].query_head2[i] /= scaleVal;
-                        predictorGui.transStructs[0].key_head2[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].query_head2[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].key_head2[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2656,11 +2688,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head2_trans, scores_query_gradient_head2, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head2, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head2, predictorGui.transStructs[0].key_head2, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head2, predictorGui.networkArray[0].transStructs[0].key_head2, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead2Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head2_der, scores_key_gradient_head2, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head2, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head2, predictorGui.transStructs[0].query_head2, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head2, predictorGui.networkArray[0].transStructs[0].query_head2, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead2Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead2Err, M, K, N);
@@ -2672,13 +2704,13 @@ namespace Predictor
                 }
                 else if (j == 3)
                 {
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].attention_filter_head3, 100, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].attention_filter_head3, 100, 100);
                     Array.Copy(temp, 0, attentionFilterTrans3, 0, 10000);
                     //temp = matOps.matrixMul(attentionFilterTrans3, deconcatMat3, 100, 100, 5);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].attention_filter_head3, deconcatMat3, 100, 100, 5);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].attention_filter_head3, deconcatMat3, 100, 100, 5);
                     Array.Copy(temp, 0, valueHead3Err, 0, 500);
 
-                    temp = softmax_derivative(predictorGui.transStructs[0].attention_filter_head3);
+                    temp = softmax_derivative(predictorGui.networkArray[0].transStructs[0].attention_filter_head3);
                     Array.Copy(temp, 0, attention_filter_head3_der, 0, 10000);
 
                     temp = matOps.transposeMat(attention_filter_head3_der, 100, 100);
@@ -2686,21 +2718,21 @@ namespace Predictor
 
                     temp = matOps.transposeMat(deconcatMat3, 5, 100);
                     Array.Copy(temp, 0, deconcatMat3, 0, 500);
-                    temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, deconcatMat3, 100, 5, 100);
+                    temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head3, deconcatMat3, 100, 5, 100);
                     Array.Copy(temp, 0, scores_query_gradient_head3, 0, 10000);
                     temp = matOps.transposeMat(deconcatMat3, 100, 5);
                     Array.Copy(temp, 0, deconcatMat3, 0, 500);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head3, 5, 100);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head3, 0, 500);
-                    temp = matOps.matrixMul(deconcatMat3, predictorGui.transStructs[0].value_head3, 100, 5, 100);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head3, 5, 100);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head3, 0, 500);
+                    temp = matOps.matrixMul(deconcatMat3, predictorGui.networkArray[0].transStructs[0].value_head3, 100, 5, 100);
                     Array.Copy(temp, 0, scores_key_gradient_head3, 0, 10000);
-                    temp = matOps.transposeMat(predictorGui.transStructs[0].value_head3, 100, 5);
-                    Array.Copy(temp, 0, predictorGui.transStructs[0].value_head3, 0, 500);
+                    temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].value_head3, 100, 5);
+                    Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].value_head3, 0, 500);
 
                     for (int i = 0; i < 500; i++)
                     {
-                        predictorGui.transStructs[0].query_head3[i] /= scaleVal;
-                        predictorGui.transStructs[0].key_head3[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].query_head3[i] /= scaleVal;
+                        predictorGui.networkArray[0].transStructs[0].key_head3[i] /= scaleVal;
                     }
 
                     for (int i = 0; i < 10000; i++)
@@ -2710,11 +2742,11 @@ namespace Predictor
                     }
                     //temp = matOps.matrixMul(attention_filter_head3_trans, scores_query_gradient_head3, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_query_gradient_head3, 0, 10000);
-                    temp = matOps.matrixMul(scores_query_gradient_head3, predictorGui.transStructs[0].key_head3, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_query_gradient_head3, predictorGui.networkArray[0].transStructs[0].key_head3, 100, 100, 5);
                     Array.Copy(temp, 0, queryHead3Err, 0, 500);
                     //temp = matOps.matrixMul(attention_filter_head3_der, scores_key_gradient_head3, 100, 100, 100);
                     //Array.Copy(temp, 0, scores_key_gradient_head3, 0, 10000);
-                    temp = matOps.matrixMul(scores_key_gradient_head3, predictorGui.transStructs[0].query_head3, 100, 100, 5);
+                    temp = matOps.matrixMul(scores_key_gradient_head3, predictorGui.networkArray[0].transStructs[0].query_head3, 100, 100, 5);
                     Array.Copy(temp, 0, keyHead3Err, 0, 500);
 
                     temp = matOps.matrixMul(inputFromConvModuleTransposed, queryHead3Err, M, K, N);
@@ -2837,7 +2869,7 @@ namespace Predictor
 
             for(int i = 0; i < 192; i++)
             {
-                sumOfSquares += (predictorGui.mlpStructs[0].secondLayerWeights[i] * predictorGui.mlpStructs[0].secondLayerWeights[i]);
+                sumOfSquares += (predictorGui.networkArray[0].mlpStructs[0].secondLayerWeights[i] * predictorGui.networkArray[0].mlpStructs[0].secondLayerWeights[i]);
             }
 
             sumOfSquares *= L2RegLambda;
@@ -2857,7 +2889,7 @@ namespace Predictor
             M = 64;
             K = 3;
 
-            temp = matOps.transposeMat(predictorGui.mlpStructs[0].secondLayerWeights, M, K);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].mlpStructs[0].secondLayerWeights, M, K);
             Array.Copy(temp, 0, secondLayerWeightsTransposed, 0, 192);
 
             if (predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -2924,7 +2956,7 @@ namespace Predictor
             sumOfSquares = 0;
             for(int i = 0; i < 96000; i++)
             {
-                sumOfSquares += (predictorGui.mlpStructs[0].firstLayerWeights[i] * predictorGui.mlpStructs[0].firstLayerWeights[i]);
+                sumOfSquares += (predictorGui.networkArray[0].mlpStructs[0].firstLayerWeights[i] * predictorGui.networkArray[0].mlpStructs[0].firstLayerWeights[i]);
             }
             sumOfSquares *= L2RegLambda;
 
@@ -2974,7 +3006,7 @@ namespace Predictor
             //element wise multiplication of error of first layer to derivative of first layer
             for (int i = 0; i < 64; i++)
             {
-                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
+                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.networkArray[0].mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
             }
 
             if(predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -3019,7 +3051,7 @@ namespace Predictor
             for (int i = 0; i < 64; i++)
             {
                 error_of_first_layer[i] -= sumOfSquares;
-                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
+                derivativeOfFirstLayerOut[i] *= error_of_first_layer[i] * predictorGui.networkArray[0].mlpStructs[0].dropout_mask[i]; //added 5/8/2022 potential dropout bug with earlier implementation
             }
 
             for (int i = 0; i < 64; i++)
@@ -3038,47 +3070,47 @@ namespace Predictor
             double[] temp;
 
             //transpose weight matrices for each attention head
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead1Trans, 0, 75);
 
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead2Trans, 0, 75);
 
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead3Trans, 0, 75);
 
             //multiply with the output of the linear layers for each attention head to get error of the input from conv module
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module1, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module2, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module3, 0, 1500);
 
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module4, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module5, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module6, 0, 1500);
 
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module7, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module8, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module9, 0, 1500);
 
             if(predictorGui.predictorGui1.enableOutputs.Checked == true)
@@ -3190,47 +3222,47 @@ namespace Predictor
             double[] temp;
 
             //transpose weight matrices for each attention head
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead1Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head1, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head1, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead1Trans, 0, 75);
 
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead2Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head2, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head2, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead2Trans, 0, 75);
 
-            temp = matOps.transposeMat(predictorGui.transStructs[0].queryLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].queryLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, queryLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].keyLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].keyLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, keyLinearLayerWeightsHead3Trans, 0, 75);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].valueLinearLayerWeights_head3, 5, 15);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].valueLinearLayerWeights_head3, 5, 15);
             Array.Copy(temp, 0, valueLinearLayerWeightsHead3Trans, 0, 75);
 
             //multiply with the output of the linear layers for each attention head to get error of the input from conv module
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head1, queryLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module1, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head1, keyLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module2, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head1, valueLinearLayerWeightsHead1Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module3, 0, 1500);
 
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head2, queryLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module4, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head2, keyLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module5, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head2, valueLinearLayerWeightsHead2Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module6, 0, 1500);
 
-            temp = matOps.matrixMul(predictorGui.transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].query_head3, queryLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module7, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].key_head3, keyLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module8, 0, 1500);
-            temp = matOps.matrixMul(predictorGui.transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
+            temp = matOps.matrixMul(predictorGui.networkArray[0].transStructs[0].value_head3, valueLinearLayerWeightsHead3Trans, 100, 5, 15);
             Array.Copy(temp, 0, error_of_input_from_conv_module9, 0, 1500);
 
             //find the average of all the errors
@@ -3304,10 +3336,10 @@ namespace Predictor
                 //calculate for gamma next
                 for (int i = 0; i < 1400; i++)
                 {
-                    predictorGui.convStructs[0].convLayer5OutputNorm[i] -= predictorGui.convStructs[0].convLayer5OutputNormBeta[i];
-                    predictorGui.convStructs[0].convLayer5OutputNorm[i] /= predictorGui.convStructs[0].convLayer5OutputNormGamma[i];
-                    deltaConvLayer5NormGamma[i] = detempencoded_avg_error_mat[i] * predictorGui.convStructs[0].convLayer5OutputNorm[i];
-                    dxhat[i] = detempencoded_avg_error_mat[i] * predictorGui.convStructs[0].convLayer5OutputNormGamma[i];
+                    predictorGui.networkArray[0].convStructs[0].convLayer5OutputNorm[i] -= predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormBeta[i];
+                    predictorGui.networkArray[0].convStructs[0].convLayer5OutputNorm[i] /= predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormGamma[i];
+                    deltaConvLayer5NormGamma[i] = detempencoded_avg_error_mat[i] * predictorGui.networkArray[0].convStructs[0].convLayer5OutputNorm[i];
+                    dxhat[i] = detempencoded_avg_error_mat[i] * predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormGamma[i];
                 }
 
                 normIdx = 0;
@@ -3319,12 +3351,12 @@ namespace Predictor
                         divar[meanVarIdx] = 0;
                         for (int j = normIdx; j < normIdx + 100; j++)
                         {
-                            divar[meanVarIdx] += dxhat[j] * (predictorGui.convStructs[0].convLayer5Output[j] - predictorGui.convStructs[0].mean[meanVarIdx]);
+                            divar[meanVarIdx] += dxhat[j] * (predictorGui.networkArray[0].convStructs[0].convLayer5Output[j] - predictorGui.networkArray[0].convStructs[0].mean[meanVarIdx]);
                         }
                         meanVarIdx++;
                         normIdx += 100;
                     }
-                    dxmu[i] = dxhat[i] * (1.0 / Math.Sqrt(predictorGui.convStructs[0].variance[meanVarIdx - 1] + predictorGui.convStructs[0].epsilon));
+                    dxmu[i] = dxhat[i] * (1.0 / Math.Sqrt(predictorGui.networkArray[0].convStructs[0].variance[meanVarIdx - 1] + predictorGui.networkArray[0].convStructs[0].epsilon));
                 }
                 meanVarIdx = 0;
                 normIdx = 0;
@@ -3332,8 +3364,8 @@ namespace Predictor
                 //calculate dsqrtvar and dvar and dsq and dxmu2
                 for (int i = 0; i < 14; i++)
                 {
-                    dsqrtvar[i] = -1.0 / (predictorGui.convStructs[0].variance[i] + predictorGui.convStructs[0].epsilon) * divar[i];
-                    dvar[i] = 0.5 * (1.0 / Math.Sqrt(predictorGui.convStructs[0].variance[i] + predictorGui.convStructs[0].epsilon)) * dsqrtvar[i];
+                    dsqrtvar[i] = -1.0 / (predictorGui.networkArray[0].convStructs[0].variance[i] + predictorGui.networkArray[0].convStructs[0].epsilon) * divar[i];
+                    dvar[i] = 0.5 * (1.0 / Math.Sqrt(predictorGui.networkArray[0].convStructs[0].variance[i] + predictorGui.networkArray[0].convStructs[0].epsilon)) * dsqrtvar[i];
                 }
 
                 temp = matOps.matrixMul(dvar, ones, 14, 1, 100);
@@ -3346,7 +3378,7 @@ namespace Predictor
                         meanVarIdx++;
                     }
 
-                    dxmu2[i] = 2 * (predictorGui.convStructs[0].convLayer5Output[i] - predictorGui.convStructs[0].mean[meanVarIdx]) * dsq[i];
+                    dxmu2[i] = 2 * (predictorGui.networkArray[0].convStructs[0].convLayer5Output[i] - predictorGui.networkArray[0].convStructs[0].mean[meanVarIdx]) * dsq[i];
                     dx1[i] = dxmu[i] + dxmu2[i];
                 }
 
@@ -3423,8 +3455,8 @@ namespace Predictor
             {
                 double[] transConvOut;
                 double[] transDerivative;
-                transConvOut = matOps.transposeMat(predictorGui.convStructs[0].convLayer5Output, 14, 100);
-                Array.Copy(transConvOut, 0, predictorGui.convStructs[0].convLayer5Output, 0, 1400);
+                transConvOut = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer5Output, 14, 100);
+                Array.Copy(transConvOut, 0, predictorGui.networkArray[0].convStructs[0].convLayer5Output, 0, 1400);
 
                 if (predictorGui.predictorGui1.preluSelect.Checked == true)
                 {
@@ -3469,7 +3501,7 @@ namespace Predictor
                 }
 
                 double[] padded_input;
-                padded_input = matOps.transposeMat(predictorGui.convStructs[0].convLayer4OutPadded, 14, 116);
+                padded_input = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer4OutPadded, 14, 116);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
@@ -3597,8 +3629,8 @@ namespace Predictor
             {
                 double[] transConvOut;
                 double[] transDerivative;
-                transConvOut = matOps.transposeMat(predictorGui.convStructs[0].convLayer4Output, 14, 100);
-                Array.Copy(transConvOut, 0, predictorGui.convStructs[0].convLayer4Output, 0, 1400);
+                transConvOut = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer4Output, 14, 100);
+                Array.Copy(transConvOut, 0, predictorGui.networkArray[0].convStructs[0].convLayer4Output, 0, 1400);
 
                 if (predictorGui.predictorGui1.preluSelect.Checked == true)
                 {
@@ -3644,7 +3676,7 @@ namespace Predictor
                 }
 
                 double[] padded_input;
-                padded_input = matOps.transposeMat(predictorGui.convStructs[0].convLayer3OutPadded, 14, 108);
+                padded_input = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer3OutPadded, 14, 108);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
@@ -3772,8 +3804,8 @@ namespace Predictor
             {
                 double[] transConvOut;
                 double[] transDerivative;
-                transConvOut = matOps.transposeMat(predictorGui.convStructs[0].convLayer3Output, 14, 100);
-                Array.Copy(transConvOut, 0, predictorGui.convStructs[0].convLayer3Output, 0, 1400);
+                transConvOut = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer3Output, 14, 100);
+                Array.Copy(transConvOut, 0, predictorGui.networkArray[0].convStructs[0].convLayer3Output, 0, 1400);
 
                 if (predictorGui.predictorGui1.preluSelect.Checked == true)
                 {
@@ -3819,7 +3851,7 @@ namespace Predictor
                 }
 
                 double[] padded_input;
-                padded_input = matOps.transposeMat(predictorGui.convStructs[0].convLayer2OutPadded, 14, 104);
+                padded_input = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer2OutPadded, 14, 104);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
@@ -3947,8 +3979,8 @@ namespace Predictor
             {
                 double[] transConvOut;
                 double[] transDerivative;
-                transConvOut = matOps.transposeMat(predictorGui.convStructs[0].convLayer2Output, 14, 100);
-                Array.Copy(transConvOut, 0, predictorGui.convStructs[0].convLayer2Output, 0, 1400);
+                transConvOut = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer2Output, 14, 100);
+                Array.Copy(transConvOut, 0, predictorGui.networkArray[0].convStructs[0].convLayer2Output, 0, 1400);
 
                 if (predictorGui.predictorGui1.preluSelect.Checked == true)
                 {
@@ -3994,7 +4026,7 @@ namespace Predictor
                 }
 
                 double[] padded_input;
-                padded_input = matOps.transposeMat(predictorGui.convStructs[0].convLayer1OutPadded, 14, 102);
+                padded_input = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer1OutPadded, 14, 102);
 
                 if (predictorGui.predictorGui1.enableOutputs.Checked == true)
                 {
@@ -4123,8 +4155,8 @@ namespace Predictor
             {
                 double[] transConvOut;
 
-                transConvOut = matOps.transposeMat(predictorGui.convStructs[0].convLayer1Output, 14, 100);
-                Array.Copy(transConvOut, 0, predictorGui.convStructs[0].convLayer1Output, 0, 1400);
+                transConvOut = matOps.transposeMat(predictorGui.networkArray[0].convStructs[0].convLayer1Output, 14, 100);
+                Array.Copy(transConvOut, 0, predictorGui.networkArray[0].convStructs[0].convLayer1Output, 0, 1400);
 
                 if (predictorGui.predictorGui1.preluSelect.Checked == true)
                 {
@@ -4161,8 +4193,8 @@ namespace Predictor
 
                 for(int i = 0; i < 101; i++)
                 {
-                    Array.Copy(predictorGui.eventsArray[i].prices, 0, padded_inputPrices, rowIdx, 32);
-                    Array.Copy(predictorGui.eventsArray[i].sizes, 0, padded_inputSizes, rowIdx, 32);
+                    Array.Copy(predictorGui.totalEventsArray[0].eventsArray[i].prices, 0, padded_inputPrices, rowIdx, 32);
+                    Array.Copy(predictorGui.totalEventsArray[0].eventsArray[i].sizes, 0, padded_inputSizes, rowIdx, 32);
                     rowIdx += 32;
                 }
 
@@ -4378,77 +4410,77 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) * (4 * (predictorGui.transStructs[0].affineIntermediateRes[i] + 1) + 
-                        (4 * Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes[i])) +
-                        Math.Exp(3 * predictorGui.transStructs[0].affineIntermediateRes[i]) + Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) * 
-                        (4 * predictorGui.transStructs[0].affineIntermediateRes[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.transStructs[0].affineIntermediateRes[i]) + Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes[i]) + 2, 2);
+                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i]) * (4 * (predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i] + 1) + 
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i]) + Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i]) * 
+                        (4 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i]) + Math.Exp(2 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i]) + 2, 2);
                 }
             }
             if (layerNum == 3)
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) * (4 * (predictorGui.transStructs[0].affineIntermediateRes2[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes2[i])) +
-                        Math.Exp(3 * predictorGui.transStructs[0].affineIntermediateRes2[i]) + Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) *
-                        (4 * predictorGui.transStructs[0].affineIntermediateRes2[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.transStructs[0].affineIntermediateRes2[i]) + Math.Exp(2 * predictorGui.transStructs[0].affineIntermediateRes2[i]) + 2, 2);
+                    derivativeOfAffine1Output[i] = Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i]) * (4 * (predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i]) + Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i]) *
+                        (4 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i]) + Math.Exp(2 * predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i]) + 2, 2);
                 }
             }
             if (layerNum == 13)
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.convStructs[0].convLayer1Output[i]) * (4 * (predictorGui.convStructs[0].convLayer1Output[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.convStructs[0].convLayer1Output[i])) +
-                        Math.Exp(3 * predictorGui.convStructs[0].convLayer1Output[i]) + Math.Exp(predictorGui.convStructs[0].convLayer1Output[i]) *
-                        (4 * predictorGui.convStructs[0].convLayer1Output[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.convStructs[0].convLayer1Output[i]) + Math.Exp(2 * predictorGui.convStructs[0].convLayer1Output[i]) + 2, 2);
+                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]) * (4 * (predictorGui.networkArray[0].convStructs[0].convLayer1Output[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer1Output[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]) + Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]) *
+                        (4 * predictorGui.networkArray[0].convStructs[0].convLayer1Output[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]) + Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]) + 2, 2);
                 }
             }
             if (layerNum == 12)
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.convStructs[0].convLayer2Output[i]) * (4 * (predictorGui.convStructs[0].convLayer2Output[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.convStructs[0].convLayer2Output[i])) +
-                        Math.Exp(3 * predictorGui.convStructs[0].convLayer2Output[i]) + Math.Exp(predictorGui.convStructs[0].convLayer2Output[i]) *
-                        (4 * predictorGui.convStructs[0].convLayer2Output[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.convStructs[0].convLayer2Output[i]) + Math.Exp(2 * predictorGui.convStructs[0].convLayer2Output[i]) + 2, 2);
+                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]) * (4 * (predictorGui.networkArray[0].convStructs[0].convLayer2Output[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer2Output[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]) + Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]) *
+                        (4 * predictorGui.networkArray[0].convStructs[0].convLayer2Output[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]) + Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]) + 2, 2);
                 }
             }
             if (layerNum == 11)
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.convStructs[0].convLayer3Output[i]) * (4 * (predictorGui.convStructs[0].convLayer3Output[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.convStructs[0].convLayer3Output[i])) +
-                        Math.Exp(3 * predictorGui.convStructs[0].convLayer3Output[i]) + Math.Exp(predictorGui.convStructs[0].convLayer3Output[i]) *
-                        (4 * predictorGui.convStructs[0].convLayer3Output[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.convStructs[0].convLayer3Output[i]) + Math.Exp(2 * predictorGui.convStructs[0].convLayer3Output[i]) + 2, 2);
+                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]) * (4 * (predictorGui.networkArray[0].convStructs[0].convLayer3Output[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer3Output[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]) + Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]) *
+                        (4 * predictorGui.networkArray[0].convStructs[0].convLayer3Output[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]) + Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]) + 2, 2);
                 }
             }
             if (layerNum == 9)
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.convStructs[0].convLayer4Output[i]) * (4 * (predictorGui.convStructs[0].convLayer4Output[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.convStructs[0].convLayer4Output[i])) +
-                        Math.Exp(3 * predictorGui.convStructs[0].convLayer4Output[i]) + Math.Exp(predictorGui.convStructs[0].convLayer4Output[i]) *
-                        (4 * predictorGui.convStructs[0].convLayer4Output[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.convStructs[0].convLayer4Output[i]) + Math.Exp(2 * predictorGui.convStructs[0].convLayer4Output[i]) + 2, 2);
+                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]) * (4 * (predictorGui.networkArray[0].convStructs[0].convLayer4Output[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer4Output[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]) + Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]) *
+                        (4 * predictorGui.networkArray[0].convStructs[0].convLayer4Output[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]) + Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]) + 2, 2);
                 }
             }
             if (layerNum == 8)
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.convStructs[0].convLayer5Output[i]) * (4 * (predictorGui.convStructs[0].convLayer5Output[i] + 1) +
-                        (4 * Math.Exp(2 * predictorGui.convStructs[0].convLayer5Output[i])) +
-                        Math.Exp(3 * predictorGui.convStructs[0].convLayer5Output[i]) + Math.Exp(predictorGui.convStructs[0].convLayer5Output[i]) *
-                        (4 * predictorGui.convStructs[0].convLayer5Output[i] + 6)) /
-                        Math.Pow(2 * Math.Exp(predictorGui.convStructs[0].convLayer5Output[i]) + Math.Exp(2 * predictorGui.convStructs[0].convLayer5Output[i]) + 2, 2);
+                    derivativeOfConvLayerOut[i] = Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]) * (4 * (predictorGui.networkArray[0].convStructs[0].convLayer5Output[i] + 1) +
+                        (4 * Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer5Output[i])) +
+                        Math.Exp(3 * predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]) + Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]) *
+                        (4 * predictorGui.networkArray[0].convStructs[0].convLayer5Output[i] + 6)) /
+                        Math.Pow(2 * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]) + Math.Exp(2 * predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]) + 2, 2);
                 }
             }
         }
@@ -4459,13 +4491,13 @@ namespace Predictor
             {
                 for(int i = 0; i < 1400; i++)
                 {
-                    if(predictorGui.convStructs[0].convLayer1Output[i] > 0)
+                    if(predictorGui.networkArray[0].convStructs[0].convLayer1Output[i] > 0)
                     {
                         derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda;
                     }
                     else
                     {
-                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.convStructs[0].convLayer1Output[i]);
+                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer1Output[i]);
                     }
                 }
             }
@@ -4473,13 +4505,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer2Output[i] > 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer2Output[i] > 0)
                     {
                         derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda;
                     }
                     else
                     {
-                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.convStructs[0].convLayer2Output[i]);
+                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer2Output[i]);
                     }
                 }
             }
@@ -4487,13 +4519,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer3Output[i] > 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer3Output[i] > 0)
                     {
                         derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda;
                     }
                     else
                     {
-                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.convStructs[0].convLayer3Output[i]);
+                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer3Output[i]);
                     }
                 }
             }
@@ -4501,13 +4533,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer4Output[i] > 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer4Output[i] > 0)
                     {
                         derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda;
                     }
                     else
                     {
-                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.convStructs[0].convLayer4Output[i]);
+                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer4Output[i]);
                     }
                 }
             }
@@ -4515,13 +4547,13 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer5Output[i] > 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer5Output[i] > 0)
                     {
                         derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda;
                     }
                     else
                     {
-                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.convStructs[0].convLayer5Output[i]);
+                        derivativeOfConvLayerOut[i] = convLayer.SeLU_lambda * convLayer.SeLU_alpha * Math.Exp(predictorGui.networkArray[0].convStructs[0].convLayer5Output[i]);
                     }
                 }
             }
@@ -4533,7 +4565,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer1Output[i] + predictorGui.convStructs[0].convLayer1Bias[i] >= 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer1Output[i] + predictorGui.networkArray[0].convStructs[0].convLayer1Bias[i] >= 0)
                     {
                         derivativeOfConvLayerOut[i] = 1;
                     }
@@ -4547,7 +4579,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer2Output[i] + predictorGui.convStructs[0].convLayer2Bias[i] >= 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer2Output[i] + predictorGui.networkArray[0].convStructs[0].convLayer2Bias[i] >= 0)
                     {
                         derivativeOfConvLayerOut[i] = 1;
                     }
@@ -4561,7 +4593,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer3Output[i] + predictorGui.convStructs[0].convLayer3Bias[i] >= 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer3Output[i] + predictorGui.networkArray[0].convStructs[0].convLayer3Bias[i] >= 0)
                     {
                         derivativeOfConvLayerOut[i] = 1;
                     }
@@ -4575,7 +4607,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    if (predictorGui.transStructs[0].residualConnectionOutputNormCpy[i] >= 0)
+                    if (predictorGui.networkArray[0].transStructs[0].residualConnectionOutputNormCpy[i] >= 0)
                     {
                         derivativeOfAttentionBlockOutput[i] = 1;
                     }
@@ -4589,7 +4621,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer4Output[i] + predictorGui.convStructs[0].convLayer4Bias[i] >= 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer4Output[i] + predictorGui.networkArray[0].convStructs[0].convLayer4Bias[i] >= 0)
                     {
                         derivativeOfConvLayerOut[i] = 1;
                     }
@@ -4603,7 +4635,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    if (predictorGui.convStructs[0].convLayer5Output[i] + predictorGui.convStructs[0].convLayer5Bias[i] >= 0)
+                    if (predictorGui.networkArray[0].convStructs[0].convLayer5Output[i] + predictorGui.networkArray[0].convStructs[0].convLayer5Bias[i] >= 0)
                     {
                         derivativeOfConvLayerOut[i] = 1;
                     }
@@ -4617,7 +4649,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    if (predictorGui.transStructs[0].residualConnectionOutputNorm[i] >= 0)
+                    if (predictorGui.networkArray[0].transStructs[0].residualConnectionOutputNorm[i] >= 0)
                     {
                         derivativeOfAttentionBlockOutput[i] = 1;
                     }
@@ -4631,7 +4663,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (predictorGui.transStructs[0].affineIntermediateRes3[i] >= 0)
+                    if (predictorGui.networkArray[0].transStructs[0].affineIntermediateRes3[i] >= 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
@@ -4645,7 +4677,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (predictorGui.transStructs[0].affineIntermediateRes[i] >= 0)
+                    if (predictorGui.networkArray[0].transStructs[0].affineIntermediateRes[i] >= 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
@@ -4659,7 +4691,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 6000; i++)
                 {
-                    if (predictorGui.transStructs[0].affineIntermediateRes2[i] > 0)
+                    if (predictorGui.networkArray[0].transStructs[0].affineIntermediateRes2[i] > 0)
                     {
                         derivativeOfAffine1Output[i] = 1;
                     }
@@ -4673,7 +4705,7 @@ namespace Predictor
             {
                 for(int i = 0; i < 1500; i++)
                 {
-                    if (predictorGui.transStructs[0].transformerBlock2Output[i] >= 0)
+                    if (predictorGui.networkArray[0].transStructs[0].transformerBlock2Output[i] >= 0)
                     {
                         derivativeOfAffine2Output[i] = 1;
                     }
@@ -4687,7 +4719,7 @@ namespace Predictor
             {
                 for(int i = 0; i < 3; i++)
                 {
-                    if(predictorGui.mlpStructs[0].secondLayerOut[i] >= 0)
+                    if(predictorGui.networkArray[0].mlpStructs[0].secondLayerOut[i] >= 0)
                     {
                         derivativeOfSecondLayerOut[i] = 1;
                     }
@@ -4702,7 +4734,7 @@ namespace Predictor
             {
                 for (int i = 0; i < 64; i++)
                 {
-                    if (predictorGui.mlpStructs[0].firstLayerOut[i] >= 0)
+                    if (predictorGui.networkArray[0].mlpStructs[0].firstLayerOut[i] >= 0)
                     {
                         derivativeOfFirstLayerOut[i] = 1;
                     }
@@ -4901,10 +4933,10 @@ namespace Predictor
 
             priceSet.Add(maxOfEntireDayPrices);
             sizeSet.Add(maxOfEntireDaySizes);
-            StreamWriter maxValOut = File.AppendText(@"X:\maxPriceAndSizeEntireDay.txt");
-            maxValOut.WriteLine(maxOfEntireDayPrices);
-            maxValOut.WriteLine(maxOfEntireDaySizes);
-            maxValOut.Close();
+            //StreamWriter maxValOut = File.AppendText(@"X:\maxPriceAndSizeEntireDay.txt");
+            //maxValOut.WriteLine(maxOfEntireDayPrices);
+            //maxValOut.WriteLine(maxOfEntireDaySizes);
+            //maxValOut.Close();
 
             if (!File.Exists(@"X:\min_max_scaling_values.txt"))
             {

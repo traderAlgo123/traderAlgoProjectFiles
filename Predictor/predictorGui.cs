@@ -39,10 +39,8 @@ namespace Predictor
         public static BackgroundWorker dataInputCtrl = new BackgroundWorker();
         public static BackgroundWorker convFilteringCtrl = new BackgroundWorker();
         public static BackgroundWorker transformerCtrl = new BackgroundWorker();
-        public static int lineCount = 0;
         public static bool priceSizeFlag = true;
         public static int numEvents = 100;
-        public static Event[] eventsArray = new Event[numEvents + 1]; //adding causal padding at first event element
         public static int tensorIdx = 0;
         public static int exampleIdx = 0;
         public static int trainingExNum = 0;
@@ -50,6 +48,8 @@ namespace Predictor
         public static int iterationIdx = 0;
         public static int iterationIdx2 = 0;
         public static int epochIdx = 0;
+
+        public static matrixOps matOps = new matrixOps();
 
         public static int startingExIdx = 0;
 
@@ -84,23 +84,22 @@ namespace Predictor
 
         public static int miniBatchSize = 32;
 
+        public static ExampleArray[] exampleArray = new ExampleArray[miniBatchSize];
+
         public static Random rand = new Random();
 
         public static int percentIgnore = 5;
 
         public static weightsAdjList[] adjustmentList = new weightsAdjList[miniBatchSize];
-
-        public static string[] inputLines = new string[numEvents * 32];
-        public static inputTensor tensorIn = new inputTensor();
+        public static inputTensor[] tensorIn = new inputTensor[miniBatchSize];
+        public static EventArray[] totalEventsArray = new EventArray[miniBatchSize];
         public static inputTensor prevTensorIn = new inputTensor();
         public static convLayer convModule = new convLayer();
         public static Transformer_Implementation transformerModule = new Transformer_Implementation();
         public static backProp backProp = new backProp();
         public static MLP mlp = new MLP();
 
-        public static nnConvStructs[] convStructs = new nnConvStructs[miniBatchSize];
-        public static nnTransStructs[] transStructs = new nnTransStructs[miniBatchSize];
-        public static nnMLPStructs[] mlpStructs = new nnMLPStructs[miniBatchSize];
+        public static nnStructsArray[] networkArray = new nnStructsArray[miniBatchSize];
 
         public static ArrayList entireDaysPrices = new ArrayList();
         public static ArrayList entireDaysSizes = new ArrayList();
@@ -117,6 +116,8 @@ namespace Predictor
         public static double[] prevPrediction = new double[3];
 
         public static bool trainingActivated = false;
+        public static bool trainingBackProp = false;
+        public static bool trainingGA = false;
         public static bool runOnce = false;
         public static bool runOnce2 = false;
 
@@ -149,9 +150,24 @@ namespace Predictor
             for(int i = 0; i < 32; i++)
             {
                 adjustmentList[i] = new weightsAdjList();
-                convStructs[i] = new nnConvStructs();
-                transStructs[i] = new nnTransStructs();
-                mlpStructs[i] = new nnMLPStructs();
+                networkArray[i] = new nnStructsArray();
+                exampleArray[i] = new ExampleArray();
+                tensorIn[i] = new inputTensor();
+                totalEventsArray[i] = new EventArray();
+
+                //initialize events array with passed in events param
+                //we will leave first event empty as our causal padding
+                for (int k = 0; k < numEvents + 1; k++)
+                {
+                    totalEventsArray[i].eventsArray[k] = new Event();
+                }
+
+                for (int j = 0; j < 32; j++)
+                {
+                    networkArray[i].convStructs[j] = new nnConvStructs();
+                    networkArray[i].transStructs[j] = new nnTransStructs();
+                    networkArray[i].mlpStructs[j] = new nnMLPStructs();
+                }
             }
 
             dataInputCtrl.DoWork += dataInputCtrl_DoWork;
@@ -180,6 +196,32 @@ namespace Predictor
             transformerModule.addAndNormGammaBetaInit();
             transformerModule.transMLPBiases_init();
             transformerModule.transMLPPReLUParams_init();
+
+            //initialize weights for training networks in GA mode
+            //Parallel.For(0, 32, (i, state) =>
+            for(int i = 0; i < 32; i++)
+            {
+                convModule.lecun_normal_init_layer_GA(i, 1);
+                convModule.lecun_normal_init_layer_GA(i, 2);
+                convModule.lecun_normal_init_layer_GA(i, 3);
+                convModule.lecun_normal_init_layer_GA(i, 4);
+                convModule.lecun_normal_init_layer_GA(i, 5);
+                convModule.convLayerBiases_init_GA(i);
+                convModule.convLayerPReLUParams_init_GA(i);
+                convModule.convLayerNormGammaBetaInit_GA(i);
+
+                transformerModule.tfixupInit_attention_linearLayer_GA(i, 1);
+                transformerModule.tfixup_init_affineMLPLayers_GA(i, 1);
+
+                transformerModule.addAndNormGammaBetaInit_GA(i);
+                transformerModule.transMLPBiases_init_GA(i);
+                transformerModule.transMLPPReLUParams_init_GA(i);
+
+                mlp.xavier_init_weights_GA(i, 1);
+                mlp.xavier_init_weights_GA(i, 2);
+                mlp.mlpLayerBiases_init1_GA(i);
+                mlp.mlpLayerPReLUParams_init1_GA(i);
+            }//);
 
             //display the available devices being used by the predictor
             int cudaDevID = selectGpu;
@@ -252,16 +294,25 @@ namespace Predictor
 
             if (trainingActivated == true && !File.Exists(@"X:\parsedTensorInput.txt"))
             {
-                if (File.Exists(@"X:\trainingData\trainingTensor" + backProp.listOfTrainingExamples[tensorIdx] + ".ex.txt"))
+                Parallel.For(0, 32, (i, state) =>
                 {
-                    StreamWriter output = File.AppendText(@"X:\parsedTensorInput.txt");
-                    inputLines = File.ReadAllLines(@"X:\trainingData\trainingTensor" + backProp.listOfTrainingExamples[tensorIdx] + ".ex.txt");
-                    foreach (string line in inputLines)
+                    if (File.Exists(@"X:\trainingData\trainingTensor" + backProp.listOfTrainingExamples[i] + ".ex.txt"))
                     {
-                        output.WriteLine(line);
+                        //StreamWriter output = File.AppendText(@"X:\parsedTensorInput" + i + ".txt");
+                        exampleArray[i].inputLines = File.ReadAllLines(@"X:\trainingData\trainingTensor" + backProp.listOfTrainingExamples[tensorIdx + i] + ".ex.txt");
+                        string[] inputLines;
+                        inputLines = File.ReadAllLines(@"X:\trainingData\trainingTensorExample" + backProp.listOfTrainingExamples[tensorIdx + i].ToString() + ".gt.txt");
+                        exampleArray[i].actualOutcomes[0] = Convert.ToInt32(inputLines[0]);
+                        exampleArray[i].actualOutcomes[1] = Convert.ToInt32(inputLines[1]);
+                        exampleArray[i].actualOutcomes[2] = Convert.ToInt32(inputLines[2]);
+                        //foreach (string line in exampleArray[i].inputLines)
+                        //{
+                        //    output.WriteLine(line);
+                        //}
+                        //output.Close();
                     }
-                    output.Close();
-                }
+                });
+                tensorIdx += 32;
                 predictorGui1.label1.Text = "Parsed Training Example Number " + backProp.listOfTrainingExamples[tensorIdx];
                 predictorGui1.label3.Text = "Working on mini batch example " + miniBatchIdx.ToString();
                 trainingExNum = Convert.ToInt32(backProp.listOfTrainingExamples[tensorIdx]);
@@ -274,61 +325,83 @@ namespace Predictor
                 predictorGui1.buildTrdata.Text = "Cannot build training data on day 0";
             }
 
-            if (File.Exists(@"X:\parsedTensorInput.txt"))
+            if(trainingActivated == true)
+            {
+                Parallel.For(0, 32, (i, state) =>
+                {
+                    int lineCount = 0;
+                    foreach (string line in exampleArray[i].inputLines)
+                    {
+                        //write2.WriteLine(line);
+                        string[] lineElements;
+                        lineElements = exampleArray[i].inputLines[lineCount].Split(' ');
+                        tensorIn[i].price[lineCount] = Convert.ToDouble(lineElements[0]);
+                        tensorIn[i].size[lineCount] = Convert.ToDouble(lineElements[1]);
+                        lineCount++;
+                    }
+                    predictorGui1.norm_inputs_resp_to_prev_day_mean_and_std(i);
+                });
+
+                predictorGui1.label1.Text = "Running convFilteringCtrl.\n";
+                convFilteringCtrl.RunWorkerAsync();
+            }
+
+            if (File.Exists(@"X:\parsedTensorInput.txt") && trainingActivated == false)
             {
                 tensorFound = true;
-                inputLines = File.ReadAllLines(@"X:\parsedTensorInput.txt");
+                exampleArray[0].inputLines = File.ReadAllLines(@"X:\parsedTensorInput.txt");
                 //StreamWriter write2 = File.AppendText(@"X:\parsedTensor10" + tensorIdx.ToString() + ".txt");
-                foreach (string line in inputLines)
+                int lineCount = 0;
+                foreach (string line in exampleArray[0].inputLines)
                 {
                     //write2.WriteLine(line);
                     string[] lineElements;
-                    lineElements = inputLines[lineCount].Split(' ');
-                    tensorIn.price[lineCount] = Convert.ToDouble(lineElements[0]);
+                    lineElements = exampleArray[0].inputLines[lineCount].Split(' ');
+                    tensorIn[0].price[lineCount] = Convert.ToDouble(lineElements[0]);
                     if (predictorGui1.accumPricesSizes.Checked == true && predictorGui1.activateTraining.Checked == false)
                     {
-                        entireDaysPrices.Add(tensorIn.price[lineCount]);
+                        entireDaysPrices.Add(tensorIn[0].price[lineCount]);
                     }
-                    tensorIn.size[lineCount] = Convert.ToDouble(lineElements[1]);
+                    tensorIn[0].size[lineCount] = Convert.ToDouble(lineElements[1]);
                     if(predictorGui1.accumPricesSizes.Checked == true && predictorGui1.activateTraining.Checked == false)
                     {
-                        entireDaysSizes.Add(tensorIn.size[lineCount]);
+                        entireDaysSizes.Add(tensorIn[0].size[lineCount]);
                     }
                     lineCount++;
                 }
+                //write2.Close();
 
                 //we do not want normalization to happen while we are building the training data
                 if (predictorGui1.buildTrdata.Checked == false)
                 {
                     if ((predictorGui1.accumPricesSizes.Checked == false || dayNum == 0) && predictorGui1.activateTraining.Checked == false)
                     {
-                        predictorGui1.norm_inputs_resp_to_input_mean_and_std();
+                        predictorGui1.norm_inputs_resp_to_input_mean_and_std(0);
                         if (predictorGui1.enableOutputs.Checked == true)
                         {
                             StreamWriter tensorInOut = File.AppendText(@"X:\tensorInNormPerEx.txt");
                             for (int i = 0; i < 3200; i++)
                             {
-                                tensorInOut.WriteLine(tensorIn.price[i].ToString() + ' ' + tensorIn.size[i].ToString());
+                                tensorInOut.WriteLine(tensorIn[0].price[i].ToString() + ' ' + tensorIn[0].size[i].ToString());
                             }
                             tensorInOut.Close();
                         }
                     }
                     else if(dayNum != 0 || predictorGui1.activateTraining.Checked == true)
                     {
-                        predictorGui1.norm_inputs_resp_to_prev_day_mean_and_std();
+                        predictorGui1.norm_inputs_resp_to_prev_day_mean_and_std(0);
                         if (predictorGui1.enableOutputs.Checked == true)
                         {
                             StreamWriter tensorInOut = File.AppendText(@"X:\tensorInNormPrevDayData.txt");
                             for (int i = 0; i < 3200; i++)
                             {
-                                tensorInOut.WriteLine(tensorIn.price[i].ToString() + ' ' + tensorIn.size[i].ToString());
+                                tensorInOut.WriteLine(tensorIn[0].price[i].ToString() + ' ' + tensorIn[0].size[i].ToString());
                             }
                             tensorInOut.Close();
                         }
                     }
                 }
 
-                //write2.Close();
                 predictorGui1.label1.Text = "Tensor input file processed\n";
                 predictorGui1.label2.Text = "";
                 if (trainingActivated != true)
@@ -352,17 +425,17 @@ namespace Predictor
                         int midPointIdx = 15;
                         for (int i = 0; i < 100; i++)
                         {
-                            backProp.midPointCompareSmoothed1 += ((tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2);
+                            backProp.midPointCompareSmoothed1 += ((tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2);
                             midPointIdx += 32;
                         }
                         backProp.midPointCompareSmoothed1 /= numEvents;
                         midPointIdx -= 32;
-                        backProp.midPointCompare1 = (tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2;
+                        backProp.midPointCompare1 = (tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2;
                         predictorGui1.label4.Text = "Current Midpoint: " + backProp.midPointCompare1;
 
                         //save off first tensor to come in
-                        Array.Copy(tensorIn.price, 0, prevTensorIn.price, 0, 3200);
-                        Array.Copy(tensorIn.size, 0, prevTensorIn.size, 0, 3200);
+                        Array.Copy(tensorIn[0].price, 0, prevTensorIn.price, 0, 3200);
+                        Array.Copy(tensorIn[0].size, 0, prevTensorIn.size, 0, 3200);
 
                         prevMidPoint = false;
                         currentMidPoint = true;
@@ -372,12 +445,12 @@ namespace Predictor
                         int midPointIdx = 15;
                         for (int i = 0; i < 100; i++)
                         {
-                            backProp.midPointCompareSmoothed2 += ((tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2);
+                            backProp.midPointCompareSmoothed2 += ((tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2);
                             midPointIdx += 32;
                         }
                         backProp.midPointCompareSmoothed2 /= numEvents;
                         midPointIdx -= 32;
-                        backProp.midPointCompare2 = (tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2;
+                        backProp.midPointCompare2 = (tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2;
 
                         //calculate percentage change between second tensor's smoothed mean vs first tensor's smoothed mean
                         backProp.pricePercentChange = (backProp.midPointCompareSmoothed2 - backProp.midPointCompare1) / backProp.midPointCompare1;
@@ -426,8 +499,8 @@ namespace Predictor
                         }
                         flatExCaptureFlag = false;
                         //load prevTensor with the current tensor as this will become the prevTensor in the next pass
-                        Array.Copy(tensorIn.price, 0, prevTensorIn.price, 0, 3200);
-                        Array.Copy(tensorIn.size, 0, prevTensorIn.size, 0, 3200);
+                        Array.Copy(tensorIn[0].price, 0, prevTensorIn.price, 0, 3200);
+                        Array.Copy(tensorIn[0].size, 0, prevTensorIn.size, 0, 3200);
 
                         prevMidPoint = true;
                         currentMidPoint = false;
@@ -440,12 +513,12 @@ namespace Predictor
                         backProp.midPointCompareSmoothed2 = 0;
                         for (int i = 0; i < 100; i++)
                         {
-                            backProp.midPointCompareSmoothed2 += ((tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2);
+                            backProp.midPointCompareSmoothed2 += ((tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2);
                             midPointIdx += 32;
                         }
                         backProp.midPointCompareSmoothed2 /= numEvents;
                         midPointIdx -= 32;
-                        backProp.midPointCompare2 = (tensorIn.price[midPointIdx] + tensorIn.price[midPointIdx + 1]) / 2;
+                        backProp.midPointCompare2 = (tensorIn[0].price[midPointIdx] + tensorIn[0].price[midPointIdx + 1]) / 2;
 
                         //calculate percentage change between second tensor's smoothed mean vs first tensor's smoothed mean
                         backProp.pricePercentChange = (backProp.midPointCompareSmoothed2 - backProp.midPointCompare1) / backProp.midPointCompare1;
@@ -495,8 +568,8 @@ namespace Predictor
                         flatExCaptureFlag = false;
 
                         //load prevTensor with the current tensor as this will become the prevTensor in the next pass
-                        Array.Copy(tensorIn.price, 0, prevTensorIn.price, 0, 3200);
-                        Array.Copy(tensorIn.size, 0, prevTensorIn.size, 0, 3200);
+                        Array.Copy(tensorIn[0].price, 0, prevTensorIn.price, 0, 3200);
+                        Array.Copy(tensorIn[0].size, 0, prevTensorIn.size, 0, 3200);
                     }
                     /*
                     StreamWriter write = File.AppendText(@"X:\inputTensor" + tensorIdx.ToString() + ".txt");
@@ -555,12 +628,26 @@ namespace Predictor
 
         public static void convFilteringCtrl_DoWork(object sender, DoWorkEventArgs e)
         {
-            convModule.convolution1D(numEvents);
+            var watch = Stopwatch.StartNew();
+            if (trainingActivated == true)
+            {
+                Parallel.For(0, 32, (i, state) =>
+                {
+                    convModule.convolution1D(numEvents, i, true);
+                });
+            }
+            else
+            {
+                convModule.convolution1D(numEvents, 0, false);
+            }
+            watch.Stop();
+            predictorGui1.label2.Text = "Convolutions completed in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
         }
 
         public static void convFilteringCtrl_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            if(predictorGui1.enableConvVisual.Checked == true)
+            predictorGui1.label1.Text = "Running transformerCtrl.\n";
+            if (predictorGui1.enableConvVisual.Checked == true)
             {
                 predictorGui1.convLayer5OutShow();
             }
@@ -569,91 +656,163 @@ namespace Predictor
 
         public static void transformerCtrl_DoWork(object sender, DoWorkEventArgs e)
         {
-            double[] temp;
             var watch = Stopwatch.StartNew();
-            transformerModule.positionalEncoding(1);
-            if(predictorGui1.posEncodingVisualEbl.Checked == true)
+            if (trainingActivated == true)
             {
-                predictorGui1.posEncodingShow();
+                Parallel.For(0, 32, (i, state) =>
+                {
+                    Parallel.For(0, 32, (k, state2) =>
+                    {
+                        transformerModule.positionalEncoding(i, k, 1);
+
+                        Parallel.For(1, 4, (j, state3) =>
+                        {
+                            transformerModule.attentionHeads(i, k, j);
+                        });
+
+                        transformerModule.scaleAndSoftmax_with_masking(i, k);
+
+                        Parallel.For(1, 4, (j, state3) =>
+                        {
+                            transformerModule.matMulFilteredValueMat(i, k, j);
+                        });
+
+                        transformerModule.concatFilteredValMats(i, k);
+                        transformerModule.finalAttentionBlockLinearLayer(i, k);
+                        transformerModule.addAndNormLayer(i, k, 1, 1);
+                        transformerModule.affineTransformMLP(i, k, 1);
+                        transformerModule.addAndNormLayer(i, k, 2, 1);
+
+                        Array.Copy(networkArray[i].transStructs[k].transformerBlockFinalOutput, 0, networkArray[i].transStructs[k].transformerBlock1Output, 0, 1500);
+
+                        //block 2 start
+                        transformerModule.positionalEncoding(i, k, 2);
+                        Parallel.For(1, 4, (j, state3) =>
+                        {
+                            transformerModule.attentionHeads(i, k, j);
+                        });
+
+                        transformerModule.scaleAndSoftmax_with_masking(i, k);
+
+                        Parallel.For(1, 4, (j, state3) =>
+                        {
+                            transformerModule.matMulFilteredValueMat(i, k, j);
+                        });
+
+                        transformerModule.concatFilteredValMats(i, k);
+                        transformerModule.finalAttentionBlockLinearLayer(i, k);
+                        transformerModule.addAndNormLayer(i, k, 1, 2);
+                        transformerModule.affineTransformMLP(i, k, 2);
+                        transformerModule.addAndNormLayer(i, k, 2, 2);
+
+                        Array.Copy(networkArray[i].transStructs[k].transformerBlockFinalOutput, 0, networkArray[i].transStructs[k].transformerBlock2Output, 0, 1500);
+
+                        //StreamWriter output = File.AppendText(@"X:\debugOutput\transformerBlockFinalOutput" + i + "-" + k + ".txt");
+                        //for (int m = 0; m < 1500; m++)
+                        //{
+                        //    output.WriteLine(predictorGui.networkArray[i].transStructs[k].transformerBlockFinalOutput[m].ToString());
+                        //}
+                        //output.Close();
+                    });
+                });
             }
-            Parallel.For(1, 4, (j, state) =>
+            else
             {
-                transformerModule.attentionHeads(j);
-            });
-            //transformerModule.attentionHeads(1);
-            //transformerModule.attentionHeads(2);
-            //transformerModule.attentionHeads(3);
-            transformerModule.scaleAndSoftmax_with_masking();
-            Parallel.For(1, 4, (j, state) =>
-            {
-                transformerModule.matMulFilteredValueMat(j);
-            });
-            //transformerModule.matMulFilteredValueMat(1);
-            //transformerModule.matMulFilteredValueMat(2);
-            //transformerModule.matMulFilteredValueMat(3);
-            transformerModule.concatFilteredValMats();
-            transformerModule.finalAttentionBlockLinearLayer();
-            transformerModule.addAndNormLayer(1, 1);
-            transformerModule.affineTransformMLP(1);
-            transformerModule.addAndNormLayer(2, 1);
+                double[] temp;
+                transformerModule.positionalEncoding(0, 0, 1);
+                if (predictorGui1.posEncodingVisualEbl.Checked == true)
+                {
+                    predictorGui1.posEncodingShow();
+                }
+                Parallel.For(1, 4, (j, state) =>
+                {
+                    transformerModule.attentionHeads(0, 0, j);
+                });
+                //transformerModule.attentionHeads(1);
+                //transformerModule.attentionHeads(2);
+                //transformerModule.attentionHeads(3);
+                transformerModule.scaleAndSoftmax_with_masking(0, 0);
+                Parallel.For(1, 4, (j, state) =>
+                {
+                    transformerModule.matMulFilteredValueMat(0, 0, j);
+                });
+                //transformerModule.matMulFilteredValueMat(1);
+                //transformerModule.matMulFilteredValueMat(2);
+                //transformerModule.matMulFilteredValueMat(3);
+                transformerModule.concatFilteredValMats(0, 0);
+                transformerModule.finalAttentionBlockLinearLayer(0, 0);
+                transformerModule.addAndNormLayer(0, 0, 1, 1);
+                transformerModule.affineTransformMLP(0, 0, 1);
+                transformerModule.addAndNormLayer(0, 0, 2, 1);
 
-            if (predictorGui1.attenFiltEbl.Checked == true)
-            {
-                predictorGui1.transFilterShow(1);
-                predictorGui1.Update();
+                if (predictorGui1.attenFiltEbl.Checked == true)
+                {
+                    predictorGui1.transFilterShow(1);
+                    predictorGui1.Update();
+                }
+
+                if (trainingBackProp == true)
+                {
+                    //retranspose key matrices in order to do backpropagation correctly
+                    temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head1, 100, 5);
+                    Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head1, 0, 500);
+                    temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head2, 100, 5);
+                    Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head2, 0, 500);
+                    temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head3, 100, 5);
+                    Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head3, 0, 500);
+                
+
+                    //save off the first transformer block output and the entire state of the first transformer block 1
+                    Array.Copy(networkArray[0].transStructs[0].transformerBlockFinalOutput, 0, networkArray[0].transStructs[0].transformerBlock1Output, 0, 1500);
+                    Array.Copy(networkArray[0].transStructs[0].residualConnectionOutputNorm, 0, networkArray[0].transStructs[0].residualConnectionOutputNormCpy, 0, 1500);
+                    backPropFunctions.makeTransformer1InputsCopy();
+                }
+
+                transformerModule.positionalEncoding(0, 0, 2);
+                Parallel.For(1, 4, (j, state) =>
+                {
+                    transformerModule.attentionHeads(0, 0, j);
+                });
+                //transformerModule.attentionHeads(1);
+                //transformerModule.attentionHeads(2);
+                //transformerModule.attentionHeads(3);
+                transformerModule.scaleAndSoftmax_with_masking(0, 0);
+                Parallel.For(1, 4, (j, state) =>
+                {
+                    transformerModule.matMulFilteredValueMat(0, 0, j);
+                });
+                //transformerModule.matMulFilteredValueMat(1);
+                //transformerModule.matMulFilteredValueMat(2);
+                //transformerModule.matMulFilteredValueMat(3);
+                transformerModule.concatFilteredValMats(0, 0);
+                transformerModule.finalAttentionBlockLinearLayer(0, 0);
+                transformerModule.addAndNormLayer(0, 0, 1, 2);
+                transformerModule.affineTransformMLP(0, 0, 2);
+                transformerModule.addAndNormLayer(0, 0, 2, 2);
+
+                if (predictorGui1.attenFiltEbl.Checked == true)
+                {
+                    predictorGui1.transFilterShow(2);
+                    predictorGui1.Update();
+                }
+
+                Array.Copy(networkArray[0].transStructs[0].transformerBlockFinalOutput, 0, networkArray[0].transStructs[0].transformerBlock2Output, 0, 1500);
+
+                //retranspose key matrices in order to do backpropagation correctly
+                temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head1, 100, 5);
+                Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head1, 0, 500);
+                temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head2, 100, 5);
+                Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head2, 0, 500);
+                temp = matOps.transposeMat(networkArray[0].transStructs[0].key_head3, 100, 5);
+                Array.Copy(temp, 0, networkArray[0].transStructs[0].key_head3, 0, 500);
+
+                //StreamWriter output = File.AppendText(@"X:\debugOutput\transformerBlockFinalOutput" + "0" + "-" + "0" + ".txt");
+                //for (int m = 0; m < 1500; m++)
+                //{
+                //    output.WriteLine(predictorGui.networkArray[0].transStructs[0].transformerBlockFinalOutput[m].ToString());
+                //}
+                //output.Close();
             }
-
-            //retranspose key matrices in order to do backpropagation correctly
-            matrixOps matOps = new matrixOps();
-            temp = matOps.transposeMat(transStructs[0].key_head1, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head1, 0, 500);
-            temp = matOps.transposeMat(transStructs[0].key_head2, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head2, 0, 500);
-            temp = matOps.transposeMat(transStructs[0].key_head3, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head3, 0, 500);
-
-            //save off the first transformer block output and the entire state of the first transformer block 1
-            Array.Copy(transStructs[0].transformerBlockFinalOutput, 0, transStructs[0].transformerBlock1Output, 0, 1500);
-            Array.Copy(transStructs[0].residualConnectionOutputNorm, 0, transStructs[0].residualConnectionOutputNormCpy, 0, 1500);
-            backPropFunctions.makeTransformer1InputsCopy();
-
-            transformerModule.positionalEncoding(2);
-            Parallel.For(1, 4, (j, state) =>
-            {
-                transformerModule.attentionHeads(j);
-            });
-            //transformerModule.attentionHeads(1);
-            //transformerModule.attentionHeads(2);
-            //transformerModule.attentionHeads(3);
-            transformerModule.scaleAndSoftmax_with_masking();
-            Parallel.For(1, 4, (j, state) =>
-            {
-                transformerModule.matMulFilteredValueMat(j);
-            });
-            //transformerModule.matMulFilteredValueMat(1);
-            //transformerModule.matMulFilteredValueMat(2);
-            //transformerModule.matMulFilteredValueMat(3);
-            transformerModule.concatFilteredValMats();
-            transformerModule.finalAttentionBlockLinearLayer();
-            transformerModule.addAndNormLayer(1, 2);
-            transformerModule.affineTransformMLP(2);
-            transformerModule.addAndNormLayer(2, 2);
-
-            if (predictorGui1.attenFiltEbl.Checked == true)
-            {
-                predictorGui1.transFilterShow(2);
-                predictorGui1.Update();
-            }
-
-            Array.Copy(transStructs[0].transformerBlockFinalOutput, 0, transStructs[0].transformerBlock2Output, 0, 1500);
-
-            //retranspose key matrices in order to do backpropagation correctly
-            temp = matOps.transposeMat(transStructs[0].key_head1, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head1, 0, 500);
-            temp = matOps.transposeMat(transStructs[0].key_head2, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head2, 0, 500);
-            temp = matOps.transposeMat(transStructs[0].key_head3, 100, 5);
-            Array.Copy(temp, 0, transStructs[0].key_head3, 0, 500);
 
             watch.Stop();
             predictorGui1.transOut.Text = "Completed Transformer Blocks 1 and 2 in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
@@ -662,36 +821,63 @@ namespace Predictor
         public static void transformerCtrl_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             var watch = Stopwatch.StartNew();
-            mlp.firstLayer();
-            mlp.secondLayer();
-            Array.Copy(mlpStructs[0].secondLayerOut, 0, prevPrediction, 0, 3); //copy prediction into prevPrediction
-                                                                     //this will be used to calculate the cross entropy loss of the previous prediction
-                                                                     //when the predictor goes through another tensor
-            if (predictorGui1.roundTo4.Checked == true)
+            predictorGui1.label1.Text = "Running MLP.\n";
+            if (trainingActivated == true)
             {
-                predictorGui1.upProb.Text = Math.Round(mlpStructs[0].secondLayerOut[0], 4).ToString();
-                predictorGui1.flatProb.Text = Math.Round(mlpStructs[0].secondLayerOut[1], 4).ToString();
-                predictorGui1.downProb.Text = Math.Round(mlpStructs[0].secondLayerOut[2], 4).ToString();
+                Parallel.For(0, 32, (i, state) =>
+                {
+                    Parallel.For(0, 32, (k, state2) =>
+                    {
+                        mlp.firstLayer(i, k);
+                        mlp.secondLayer(i, k);
+
+                        backProp.cross_entropy_loss_per_Ex_GA(i, k);
+                    });
+                });
+
+                predictorGui1.label1.Text = "Outputting cross entropy losses.\n";
+                StreamWriter output = File.AppendText(@"X:\cross_entropy_losses_for_all_networks.txt");
+                for (int i = 0; i < 32; i++)
+                {
+                    for (int j = 0; j < 32; j++)
+                    {
+                        output.WriteLine(networkArray[i].mlpStructs[j].cross_entropy_loss_per_example.ToString());
+                    }
+                }
+                output.Close();
             }
-            else if(predictorGui1.roundTo3.Checked == true)
+            else
             {
-                predictorGui1.upProb.Text = Math.Round(mlpStructs[0].secondLayerOut[0], 3).ToString();
-                predictorGui1.flatProb.Text = Math.Round(mlpStructs[0].secondLayerOut[1], 3).ToString();
-                predictorGui1.downProb.Text = Math.Round(mlpStructs[0].secondLayerOut[2], 3).ToString();
+                mlp.firstLayer(0, 0);
+                mlp.secondLayer(0, 0);
+                Array.Copy(networkArray[0].mlpStructs[0].secondLayerOut, 0, prevPrediction, 0, 3); //copy prediction into prevPrediction
+                                                                                                   //this will be used to calculate the cross entropy loss of the previous prediction
+                                                                                                   //when the predictor goes through another tensor
+                if (predictorGui1.roundTo4.Checked == true)
+                {
+                    predictorGui1.upProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[0], 4).ToString();
+                    predictorGui1.flatProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[1], 4).ToString();
+                    predictorGui1.downProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[2], 4).ToString();
+                }
+                else if (predictorGui1.roundTo3.Checked == true)
+                {
+                    predictorGui1.upProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[0], 3).ToString();
+                    predictorGui1.flatProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[1], 3).ToString();
+                    predictorGui1.downProb.Text = Math.Round(networkArray[0].mlpStructs[0].secondLayerOut[2], 3).ToString();
+                }
+
+                if (predictorGui1.buildTrdata.Checked == true && flatExIgnoreFlag == true)
+                {
+                    if (File.Exists(@"X:\trainingData\trainingTensorExample" + exampleIdx.ToString() + ".gt.txt"))
+                    {
+                        File.Delete(@"X:\trainingData\trainingTensorExample" + exampleIdx.ToString() + ".gt.txt");
+                    }
+                    flatExIgnoreFlag = false;
+                }
             }
             watch.Stop();
             predictorGui1.mlpOut.Text = "Completed MLP in " + ((double)watch.ElapsedMilliseconds / 1000F).ToString() + " seconds.";
-
-            if(predictorGui1.buildTrdata.Checked == true && flatExIgnoreFlag == true)
-            {
-                if (File.Exists(@"X:\trainingData\trainingTensorExample" + exampleIdx.ToString() + ".gt.txt"))
-                {
-                    File.Delete(@"X:\trainingData\trainingTensorExample" + exampleIdx.ToString() + ".gt.txt");
-                }
-                flatExIgnoreFlag = false;
-            }
-
-            if(trainingActivated == true)
+            if (trainingActivated == true && trainingBackProp == true)
             {
                 backProp.priceDirectionality(trainingExNum, true);
                 backProp.cross_entropy_loss_per_Ex(trainingExNum);
@@ -708,7 +894,7 @@ namespace Predictor
                     output.WriteLine("Example Num: " + trainingExNum.ToString());
                     for (int i = 0; i < 3; i++)
                     {
-                        output.WriteLine("Prediction Probabilities[" + i.ToString() + "] = " + mlpStructs[0].secondLayerOut[i].ToString() +
+                        output.WriteLine("Prediction Probabilities[" + i.ToString() + "] = " + networkArray[0].mlpStructs[0].secondLayerOut[i].ToString() +
                             "     " + "Expected Output[" + i.ToString() + "] = " + backProp.actualOutcomes[i].ToString());
                     }
                     output.WriteLine();
@@ -756,7 +942,7 @@ namespace Predictor
                 backProp.calculateErrorMatForTransBlock1();
                 //reload inputs for transformer block 1 and rerun calculations
                 backPropFunctions.reloadTransformer1Inputs();
-                Array.Copy(transStructs[0].transformerBlock1Output, 0, transStructs[0].transformerBlock2Output, 0, 1500);
+                Array.Copy(networkArray[0].transStructs[0].transformerBlock1Output, 0, networkArray[0].transStructs[0].transformerBlock2Output, 0, 1500);
                 backProp.affineMLPCalculateAdjustments(1);
                 backProp.finalLinearLayerCalculateAdjustments(1);
                 backProp.queryKeyValueCalculateAdjustments();
@@ -1044,7 +1230,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpFirstLayerWeightsAdj, "mlpFirstLayer", 0);
                     for (int i = 0; i < 96000; i++)
                     {
-                        mlpStructs[0].firstLayerWeights[i] -= backProp.mlpFirstLayer_adapted_rate[i];
+                        networkArray[0].mlpStructs[0].firstLayerWeights[i] -= backProp.mlpFirstLayer_adapted_rate[i];
                     }
                     for (int i = 0; i < 192; i++)
                     {
@@ -1057,7 +1243,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpSecondLayerWeightsAdj, "mlpSecondLayer", 0);
                     for (int i = 0; i < 192; i++)
                     {
-                        mlpStructs[0].secondLayerWeights[i] -= backProp.mlpSecondLayer_adapted_rate[i];
+                        networkArray[0].mlpStructs[0].secondLayerWeights[i] -= backProp.mlpSecondLayer_adapted_rate[i];
                     }
                     for (int i = 0; i < 9; i++)
                     {
@@ -1080,8 +1266,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].mlpLayer1BiasAdj, "mlpFirstLayerBiasPrelu", 0);
                     for (int i = 0; i < 64; i++)
                     {
-                        mlpStructs[0].mlpLayer1Bias[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
-                        mlpStructs[0].mlpLayer1PReLUParam[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
+                        networkArray[0].mlpStructs[0].mlpLayer1Bias[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
+                        networkArray[0].mlpStructs[0].mlpLayer1PReLUParam[i] -= backProp.mlpFirstLayerBias_adapted_rate[i];
                     }
                     for (int i = 0; i < 900; i++)
                     {
@@ -1108,8 +1294,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].affineMLPFirstLayerWeightsPass1Block2Adj, "affineMLPWeights1", 2);
                     for (int i = 0; i < 900; i++)
                     {
-                        transStructs[0].affineTransWeights2[i] -= backProp.affineMLPWeights2Block2_adapted_rate[i];
-                        transStructs[0].affineTransWeights1[i] -= backProp.affineMLPWeights1Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].affineTransWeights2[i] -= backProp.affineMLPWeights2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].affineTransWeights1[i] -= backProp.affineMLPWeights1Block2_adapted_rate[i];
                     }
                     for(int i = 0; i < 6000; i++)
                     {
@@ -1131,8 +1317,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].affineMLPFirstLayerBiasPass2Block2Adj, "affineMLPBiasPrelu", 2);
                     for (int i = 0; i < 6000; i++)
                     {
-                        transStructs[0].transPReLUBias[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
-                        transStructs[0].transPReLUParam[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].transPReLUBias[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].transPReLUParam[i] -= backProp.affineMLPBias2Block2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1500; i++)
                     {
@@ -1175,12 +1361,12 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].AddAndNormGamma1Adj, "affineMLPGamma1", 2);
                     for (int i = 0; i < 1500; i++)
                     {
-                        transStructs[0].addAndNorm2Beta[i] -= backProp.affineMLPBeta2_adapted_rate[i];
-                        transStructs[0].addAndNorm2Gamma[i] -= backProp.affineMLPGamma2_adapted_rate[i];
-                        transStructs[0].addAndNorm1Beta[i] -= backProp.affineMLPBeta1_adapted_rate[i];
-                        transStructs[0].addAndNorm1Gamma[i] -= backProp.affineMLPGamma1_adapted_rate[i];
+                        networkArray[0].transStructs[0].addAndNorm2Beta[i] -= backProp.affineMLPBeta2_adapted_rate[i];
+                        networkArray[0].transStructs[0].addAndNorm2Gamma[i] -= backProp.affineMLPGamma2_adapted_rate[i];
+                        networkArray[0].transStructs[0].addAndNorm1Beta[i] -= backProp.affineMLPBeta1_adapted_rate[i];
+                        networkArray[0].transStructs[0].addAndNorm1Gamma[i] -= backProp.affineMLPGamma1_adapted_rate[i];
 
-                        transStructs[0].transMLPSecondLayerBias[i] -= backProp.affineMLPBias2_adapted_rate[i];
+                        networkArray[0].transStructs[0].transMLPSecondLayerBias[i] -= backProp.affineMLPBias2_adapted_rate[i];
                     }
                     for (int i = 0; i < 225; i++)
                     {
@@ -1196,7 +1382,7 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].finalLinearLayerWeightsAdj, "finalLinearLayerWeights", 2);
                     for(int i = 0; i < 225; i++)
                     {
-                        transStructs[0].finalLinearLayerWeights[i] -= backProp.finalLinearLayerBlock2_adapted_rate[i];
+                        networkArray[0].transStructs[0].finalLinearLayerWeights[i] -= backProp.finalLinearLayerBlock2_adapted_rate[i];
                     }
                     for (int i = 0; i < 75; i++)
                     {
@@ -1286,17 +1472,17 @@ namespace Predictor
                     }
                     for (int i = 0; i < 75; i++)
                     {
-                        transStructs[0].queryLinearLayerWeights_head1[i] -= backProp.queryHead1Block2_adapted_rate[i];
-                        transStructs[0].keyLinearLayerWeights_head1[i] -= backProp.keyHead1Block2_adapted_rate[i];
-                        transStructs[0].valueLinearLayerWeights_head1[i] -= backProp.valueHead1Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].queryLinearLayerWeights_head1[i] -= backProp.queryHead1Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].keyLinearLayerWeights_head1[i] -= backProp.keyHead1Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].valueLinearLayerWeights_head1[i] -= backProp.valueHead1Block2_adapted_rate[i];
 
-                        transStructs[0].queryLinearLayerWeights_head2[i] -= backProp.queryHead2Block2_adapted_rate[i];
-                        transStructs[0].keyLinearLayerWeights_head2[i] -= backProp.keyHead2Block2_adapted_rate[i];
-                        transStructs[0].valueLinearLayerWeights_head2[i] -= backProp.valueHead2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].queryLinearLayerWeights_head2[i] -= backProp.queryHead2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].keyLinearLayerWeights_head2[i] -= backProp.keyHead2Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].valueLinearLayerWeights_head2[i] -= backProp.valueHead2Block2_adapted_rate[i];
 
-                        transStructs[0].queryLinearLayerWeights_head3[i] -= backProp.queryHead3Block2_adapted_rate[i];
-                        transStructs[0].keyLinearLayerWeights_head3[i] -= backProp.keyHead3Block2_adapted_rate[i];
-                        transStructs[0].valueLinearLayerWeights_head3[i] -= backProp.valueHead3Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].queryLinearLayerWeights_head3[i] -= backProp.queryHead3Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].keyLinearLayerWeights_head3[i] -= backProp.keyHead3Block2_adapted_rate[i];
+                        networkArray[0].transStructs[0].valueLinearLayerWeights_head3[i] -= backProp.valueHead3Block2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -1317,10 +1503,10 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer5NormBetaAdj, "convLayer5Beta", 0);
                     for (int i = 0; i < 1400; i++)
                     {
-                        predictorGui.convStructs[0].convLayer5Bias[i] -= backProp.convLayer5Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5PReLUParam[i] -= backProp.convLayer5Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5OutputNormGamma[i] -= backProp.convLayer5Gamma_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5OutputNormBeta[i] -= backProp.convLayer5Beta_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Bias[i] -= backProp.convLayer5Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5PReLUParam[i] -= backProp.convLayer5Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormGamma[i] -= backProp.convLayer5Gamma_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormBeta[i] -= backProp.convLayer5Beta_adapted_rate[i];
                     }
                     for (int i = 0; i < 14; i++)
                     {
@@ -1414,34 +1600,34 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer5Kernel14Depth2Adj, "convLayer5WeightsKernel14Depth2", 0);
                     for (int i = 0; i < 14; i++)
                     {
-                        predictorGui.convStructs[0].convLayer5Kernel5[0].depth1[i] -= backProp.convLayer5Kernel1Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[0].depth2[i] -= backProp.convLayer5Kernel1Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[1].depth1[i] -= backProp.convLayer5Kernel2Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[1].depth2[i] -= backProp.convLayer5Kernel2Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[2].depth1[i] -= backProp.convLayer5Kernel3Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[2].depth2[i] -= backProp.convLayer5Kernel3Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[3].depth1[i] -= backProp.convLayer5Kernel4Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[3].depth2[i] -= backProp.convLayer5Kernel4Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[4].depth1[i] -= backProp.convLayer5Kernel5Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[4].depth2[i] -= backProp.convLayer5Kernel5Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[5].depth1[i] -= backProp.convLayer5Kernel6Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[5].depth2[i] -= backProp.convLayer5Kernel6Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[6].depth1[i] -= backProp.convLayer5Kernel7Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[6].depth2[i] -= backProp.convLayer5Kernel7Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[7].depth1[i] -= backProp.convLayer5Kernel8Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[7].depth2[i] -= backProp.convLayer5Kernel8Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[8].depth1[i] -= backProp.convLayer5Kernel9Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[8].depth2[i] -= backProp.convLayer5Kernel9Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[9].depth1[i] -= backProp.convLayer5Kernel10Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[9].depth2[i] -= backProp.convLayer5Kernel10Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[10].depth1[i] -= backProp.convLayer5Kernel11Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[10].depth2[i] -= backProp.convLayer5Kernel11Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[11].depth1[i] -= backProp.convLayer5Kernel12Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[11].depth2[i] -= backProp.convLayer5Kernel12Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[12].depth1[i] -= backProp.convLayer5Kernel13Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[12].depth2[i] -= backProp.convLayer5Kernel13Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[13].depth1[i] -= backProp.convLayer5Kernel14Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer5Kernel5[13].depth2[i] -= backProp.convLayer5Kernel14Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[0].depth1[i] -= backProp.convLayer5Kernel1Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[0].depth2[i] -= backProp.convLayer5Kernel1Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[1].depth1[i] -= backProp.convLayer5Kernel2Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[1].depth2[i] -= backProp.convLayer5Kernel2Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[2].depth1[i] -= backProp.convLayer5Kernel3Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[2].depth2[i] -= backProp.convLayer5Kernel3Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[3].depth1[i] -= backProp.convLayer5Kernel4Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[3].depth2[i] -= backProp.convLayer5Kernel4Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[4].depth1[i] -= backProp.convLayer5Kernel5Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[4].depth2[i] -= backProp.convLayer5Kernel5Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[5].depth1[i] -= backProp.convLayer5Kernel6Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[5].depth2[i] -= backProp.convLayer5Kernel6Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[6].depth1[i] -= backProp.convLayer5Kernel7Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[6].depth2[i] -= backProp.convLayer5Kernel7Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[7].depth1[i] -= backProp.convLayer5Kernel8Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[7].depth2[i] -= backProp.convLayer5Kernel8Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[8].depth1[i] -= backProp.convLayer5Kernel9Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[8].depth2[i] -= backProp.convLayer5Kernel9Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[9].depth1[i] -= backProp.convLayer5Kernel10Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[9].depth2[i] -= backProp.convLayer5Kernel10Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[10].depth1[i] -= backProp.convLayer5Kernel11Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[10].depth2[i] -= backProp.convLayer5Kernel11Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[11].depth1[i] -= backProp.convLayer5Kernel12Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[11].depth2[i] -= backProp.convLayer5Kernel12Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[12].depth1[i] -= backProp.convLayer5Kernel13Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[12].depth2[i] -= backProp.convLayer5Kernel13Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[13].depth1[i] -= backProp.convLayer5Kernel14Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[13].depth2[i] -= backProp.convLayer5Kernel14Depth2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -1456,8 +1642,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer4BiasesAdj, "convLayer4BiasPrelu", 0);
                     for (int i = 0; i < 1400; i++)
                     {
-                        predictorGui.convStructs[0].convLayer4Bias[i] -= backProp.convLayer4Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4PReLUParam[i] -= backProp.convLayer4Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Bias[i] -= backProp.convLayer4Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4PReLUParam[i] -= backProp.convLayer4Bias_adapted_rate[i];
                     }
                     for (int i = 0; i < 14; i++)
                     {
@@ -1551,34 +1737,34 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer4Kernel14Depth2Adj, "convLayer4WeightsKernel14Depth2", 0);
                     for (int i = 0; i < 14; i++)
                     {
-                        predictorGui.convStructs[0].convLayer4Kernel4[0].depth1[i] -= backProp.convLayer4Kernel1Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[0].depth2[i] -= backProp.convLayer4Kernel1Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[1].depth1[i] -= backProp.convLayer4Kernel2Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[1].depth2[i] -= backProp.convLayer4Kernel2Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[2].depth1[i] -= backProp.convLayer4Kernel3Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[2].depth2[i] -= backProp.convLayer4Kernel3Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[3].depth1[i] -= backProp.convLayer4Kernel4Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[3].depth2[i] -= backProp.convLayer4Kernel4Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[4].depth1[i] -= backProp.convLayer4Kernel5Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[4].depth2[i] -= backProp.convLayer4Kernel5Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[5].depth1[i] -= backProp.convLayer4Kernel6Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[5].depth2[i] -= backProp.convLayer4Kernel6Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[6].depth1[i] -= backProp.convLayer4Kernel7Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[6].depth2[i] -= backProp.convLayer4Kernel7Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[7].depth1[i] -= backProp.convLayer4Kernel8Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[7].depth2[i] -= backProp.convLayer4Kernel8Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[8].depth1[i] -= backProp.convLayer4Kernel9Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[8].depth2[i] -= backProp.convLayer4Kernel9Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[9].depth1[i] -= backProp.convLayer4Kernel10Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[9].depth2[i] -= backProp.convLayer4Kernel10Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[10].depth1[i] -= backProp.convLayer4Kernel11Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[10].depth2[i] -= backProp.convLayer4Kernel11Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[11].depth1[i] -= backProp.convLayer4Kernel12Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[11].depth2[i] -= backProp.convLayer4Kernel12Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[12].depth1[i] -= backProp.convLayer4Kernel13Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[12].depth2[i] -= backProp.convLayer4Kernel13Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[13].depth1[i] -= backProp.convLayer4Kernel14Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer4Kernel4[13].depth2[i] -= backProp.convLayer4Kernel14Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[0].depth1[i] -= backProp.convLayer4Kernel1Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[0].depth2[i] -= backProp.convLayer4Kernel1Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[1].depth1[i] -= backProp.convLayer4Kernel2Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[1].depth2[i] -= backProp.convLayer4Kernel2Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[2].depth1[i] -= backProp.convLayer4Kernel3Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[2].depth2[i] -= backProp.convLayer4Kernel3Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[3].depth1[i] -= backProp.convLayer4Kernel4Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[3].depth2[i] -= backProp.convLayer4Kernel4Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[4].depth1[i] -= backProp.convLayer4Kernel5Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[4].depth2[i] -= backProp.convLayer4Kernel5Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[5].depth1[i] -= backProp.convLayer4Kernel6Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[5].depth2[i] -= backProp.convLayer4Kernel6Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[6].depth1[i] -= backProp.convLayer4Kernel7Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[6].depth2[i] -= backProp.convLayer4Kernel7Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[7].depth1[i] -= backProp.convLayer4Kernel8Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[7].depth2[i] -= backProp.convLayer4Kernel8Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[8].depth1[i] -= backProp.convLayer4Kernel9Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[8].depth2[i] -= backProp.convLayer4Kernel9Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[9].depth1[i] -= backProp.convLayer4Kernel10Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[9].depth2[i] -= backProp.convLayer4Kernel10Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[10].depth1[i] -= backProp.convLayer4Kernel11Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[10].depth2[i] -= backProp.convLayer4Kernel11Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[11].depth1[i] -= backProp.convLayer4Kernel12Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[11].depth2[i] -= backProp.convLayer4Kernel12Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[12].depth1[i] -= backProp.convLayer4Kernel13Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[12].depth2[i] -= backProp.convLayer4Kernel13Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[13].depth1[i] -= backProp.convLayer4Kernel14Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[13].depth2[i] -= backProp.convLayer4Kernel14Depth2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -1593,8 +1779,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer3BiasesAdj, "convLayer3BiasPrelu", 0);
                     for (int i = 0; i < 1400; i++)
                     {
-                        predictorGui.convStructs[0].convLayer3Bias[i] -= backProp.convLayer3Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3PReLUParam[i] -= backProp.convLayer3Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Bias[i] -= backProp.convLayer3Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3PReLUParam[i] -= backProp.convLayer3Bias_adapted_rate[i];
                     }
                     for (int i = 0; i < 14; i++)
                     {
@@ -1688,34 +1874,33 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer3Kernel14Depth2Adj, "convLayer3WeightsKernel14Depth2", 0);
                     for (int i = 0; i < 14; i++)
                     {
-                        predictorGui.convStructs[0].convLayer3Kernel3[0].depth1[i] -= backProp.convLayer3Kernel1Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[0].depth2[i] -= backProp.convLayer3Kernel1Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[1].depth1[i] -= backProp.convLayer3Kernel2Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[1].depth2[i] -= backProp.convLayer3Kernel2Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[2].depth1[i] -= backProp.convLayer3Kernel3Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[2].depth2[i] -= backProp.convLayer3Kernel3Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[3].depth1[i] -= backProp.convLayer3Kernel4Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[3].depth2[i] -= backProp.convLayer3Kernel4Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[4].depth1[i] -= backProp.convLayer3Kernel5Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[4].depth2[i] -= backProp.convLayer3Kernel5Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[5].depth1[i] -= backProp.convLayer3Kernel6Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[5].depth2[i] -= backProp.convLayer3Kernel6Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[6].depth1[i] -= backProp.convLayer3Kernel7Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[6].depth2[i] -= backProp.convLayer3Kernel7Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[7].depth1[i] -= backProp.convLayer3Kernel8Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[7].depth2[i] -= backProp.convLayer3Kernel8Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[8].depth1[i] -= backProp.convLayer3Kernel9Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[8].depth2[i] -= backProp.convLayer3Kernel9Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[9].depth1[i] -= backProp.convLayer3Kernel10Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[9].depth2[i] -= backProp.convLayer3Kernel10Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[10].depth1[i] -= backProp.convLayer3Kernel11Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[10].depth2[i] -= backProp.convLayer3Kernel11Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[11].depth1[i] -= backProp.convLayer3Kernel12Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[11].depth2[i] -= backProp.convLayer3Kernel12Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[12].depth1[i] -= backProp.convLayer3Kernel13Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[12].depth2[i] -= backProp.convLayer3Kernel13Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[13].depth1[i] -= backProp.convLayer3Kernel14Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer3Kernel3[13].depth2[i] -= backProp.convLayer3Kernel14Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[0].depth1[i] -= backProp.convLayer3Kernel1Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[0].depth2[i] -= backProp.convLayer3Kernel1Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[1].depth1[i] -= backProp.convLayer3Kernel2Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[1].depth2[i] -= backProp.convLayer3Kernel2Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[2].depth1[i] -= backProp.convLayer3Kernel3Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[2].depth2[i] -= backProp.convLayer3Kernel3Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[3].depth1[i] -= backProp.convLayer3Kernel4Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[3].depth2[i] -= backProp.convLayer3Kernel4Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[4].depth1[i] -= backProp.convLayer3Kernel5Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[4].depth2[i] -= backProp.convLayer3Kernel5Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[5].depth1[i] -= backProp.convLayer3Kernel6Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[5].depth2[i] -= backProp.convLayer3Kernel6Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[6].depth1[i] -= backProp.convLayer3Kernel7Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[6].depth2[i] -= backProp.convLayer3Kernel7Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[7].depth1[i] -= backProp.convLayer3Kernel8Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[7].depth2[i] -= backProp.convLayer3Kernel8Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[8].depth1[i] -= backProp.convLayer3Kernel9Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[8].depth2[i] -= backProp.convLayer3Kernel9Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[9].depth2[i] -= backProp.convLayer3Kernel10Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[10].depth1[i] -= backProp.convLayer3Kernel11Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[10].depth2[i] -= backProp.convLayer3Kernel11Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[11].depth1[i] -= backProp.convLayer3Kernel12Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[11].depth2[i] -= backProp.convLayer3Kernel12Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[12].depth1[i] -= backProp.convLayer3Kernel13Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[12].depth2[i] -= backProp.convLayer3Kernel13Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[13].depth1[i] -= backProp.convLayer3Kernel14Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[13].depth2[i] -= backProp.convLayer3Kernel14Depth2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -1730,8 +1915,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer2BiasesAdj, "convLayer2BiasPrelu", 0);
                     for (int i = 0; i < 1400; i++)
                     {
-                        predictorGui.convStructs[0].convLayer2Bias[i] -= backProp.convLayer2Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2PReLUParam[i] -= backProp.convLayer2Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Bias[i] -= backProp.convLayer2Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2PReLUParam[i] -= backProp.convLayer2Bias_adapted_rate[i];
                     }
                     for (int i = 0; i < 14; i++)
                     {
@@ -1825,34 +2010,34 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer2Kernel14Depth2Adj, "convLayer2WeightsKernel14Depth2", 0);
                     for (int i = 0; i < 14; i++)
                     {
-                        predictorGui.convStructs[0].convLayer2Kernel2[0].depth1[i] -= backProp.convLayer2Kernel1Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[0].depth2[i] -= backProp.convLayer2Kernel1Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[1].depth1[i] -= backProp.convLayer2Kernel2Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[1].depth2[i] -= backProp.convLayer2Kernel2Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[2].depth1[i] -= backProp.convLayer2Kernel3Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[2].depth2[i] -= backProp.convLayer2Kernel3Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[3].depth1[i] -= backProp.convLayer2Kernel4Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[3].depth2[i] -= backProp.convLayer2Kernel4Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[4].depth1[i] -= backProp.convLayer2Kernel5Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[4].depth2[i] -= backProp.convLayer2Kernel5Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[5].depth1[i] -= backProp.convLayer2Kernel6Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[5].depth2[i] -= backProp.convLayer2Kernel6Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[6].depth1[i] -= backProp.convLayer2Kernel7Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[6].depth2[i] -= backProp.convLayer2Kernel7Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[7].depth1[i] -= backProp.convLayer2Kernel8Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[7].depth2[i] -= backProp.convLayer2Kernel8Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[8].depth1[i] -= backProp.convLayer2Kernel9Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[8].depth2[i] -= backProp.convLayer2Kernel9Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[9].depth1[i] -= backProp.convLayer2Kernel10Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[9].depth2[i] -= backProp.convLayer2Kernel10Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[10].depth1[i] -= backProp.convLayer2Kernel11Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[10].depth2[i] -= backProp.convLayer2Kernel11Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[11].depth1[i] -= backProp.convLayer2Kernel12Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[11].depth2[i] -= backProp.convLayer2Kernel12Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[12].depth1[i] -= backProp.convLayer2Kernel13Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[12].depth2[i] -= backProp.convLayer2Kernel13Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[13].depth1[i] -= backProp.convLayer2Kernel14Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer2Kernel2[13].depth2[i] -= backProp.convLayer2Kernel14Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[0].depth1[i] -= backProp.convLayer2Kernel1Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[0].depth2[i] -= backProp.convLayer2Kernel1Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[1].depth1[i] -= backProp.convLayer2Kernel2Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[1].depth2[i] -= backProp.convLayer2Kernel2Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[2].depth1[i] -= backProp.convLayer2Kernel3Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[2].depth2[i] -= backProp.convLayer2Kernel3Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[3].depth1[i] -= backProp.convLayer2Kernel4Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[3].depth2[i] -= backProp.convLayer2Kernel4Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[4].depth1[i] -= backProp.convLayer2Kernel5Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[4].depth2[i] -= backProp.convLayer2Kernel5Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[5].depth1[i] -= backProp.convLayer2Kernel6Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[5].depth2[i] -= backProp.convLayer2Kernel6Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[6].depth1[i] -= backProp.convLayer2Kernel7Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[6].depth2[i] -= backProp.convLayer2Kernel7Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[7].depth1[i] -= backProp.convLayer2Kernel8Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[7].depth2[i] -= backProp.convLayer2Kernel8Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[8].depth1[i] -= backProp.convLayer2Kernel9Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[8].depth2[i] -= backProp.convLayer2Kernel9Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[9].depth1[i] -= backProp.convLayer2Kernel10Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[9].depth2[i] -= backProp.convLayer2Kernel10Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[10].depth1[i] -= backProp.convLayer2Kernel11Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[10].depth2[i] -= backProp.convLayer2Kernel11Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[11].depth1[i] -= backProp.convLayer2Kernel12Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[11].depth2[i] -= backProp.convLayer2Kernel12Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[12].depth1[i] -= backProp.convLayer2Kernel13Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[12].depth2[i] -= backProp.convLayer2Kernel13Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[13].depth1[i] -= backProp.convLayer2Kernel14Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[13].depth2[i] -= backProp.convLayer2Kernel14Depth2_adapted_rate[i];
                     }
                     for (int i = 0; i < 1400; i++)
                     {
@@ -1867,8 +2052,8 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer1BiasesAdj, "convLayer1BiasPrelu", 0);
                     for (int i = 0; i < 1400; i++)
                     {
-                        predictorGui.convStructs[0].convLayer1Bias[i] -= backProp.convLayer1Bias_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1PReLUParam[i] -= backProp.convLayer1Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Bias[i] -= backProp.convLayer1Bias_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1PReLUParam[i] -= backProp.convLayer1Bias_adapted_rate[i];
                     }
                     for (int i = 0; i < 32; i++)
                     {
@@ -2046,67 +2231,70 @@ namespace Predictor
                     funcs.rectified_adam_optimizer(adjustmentList[0].convLayer1Kernel14Depth4Adj, "convLayer1WeightsKernel14Depth4", 0);
                     for (int i = 0; i < 32; i++)
                     {
-                        predictorGui.convStructs[0].convLayer1Kernel1[0].depth1[i] -= backProp.convLayer1Kernel1Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[0].depth2[i] -= backProp.convLayer1Kernel1Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[0].depth3[i] -= backProp.convLayer1Kernel1Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[0].depth4[i] -= backProp.convLayer1Kernel1Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[1].depth1[i] -= backProp.convLayer1Kernel2Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[1].depth2[i] -= backProp.convLayer1Kernel2Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[1].depth3[i] -= backProp.convLayer1Kernel2Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[1].depth4[i] -= backProp.convLayer1Kernel2Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[2].depth1[i] -= backProp.convLayer1Kernel3Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[2].depth2[i] -= backProp.convLayer1Kernel3Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[2].depth3[i] -= backProp.convLayer1Kernel3Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[2].depth4[i] -= backProp.convLayer1Kernel3Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[3].depth1[i] -= backProp.convLayer1Kernel4Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[3].depth2[i] -= backProp.convLayer1Kernel4Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[3].depth3[i] -= backProp.convLayer1Kernel4Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[3].depth4[i] -= backProp.convLayer1Kernel4Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[4].depth1[i] -= backProp.convLayer1Kernel5Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[4].depth2[i] -= backProp.convLayer1Kernel5Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[4].depth3[i] -= backProp.convLayer1Kernel5Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[4].depth4[i] -= backProp.convLayer1Kernel5Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[5].depth1[i] -= backProp.convLayer1Kernel6Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[5].depth2[i] -= backProp.convLayer1Kernel6Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[5].depth3[i] -= backProp.convLayer1Kernel6Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[5].depth4[i] -= backProp.convLayer1Kernel6Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[6].depth1[i] -= backProp.convLayer1Kernel7Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[6].depth2[i] -= backProp.convLayer1Kernel7Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[6].depth3[i] -= backProp.convLayer1Kernel7Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[6].depth4[i] -= backProp.convLayer1Kernel7Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[7].depth1[i] -= backProp.convLayer1Kernel8Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[7].depth2[i] -= backProp.convLayer1Kernel8Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[7].depth3[i] -= backProp.convLayer1Kernel8Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[7].depth4[i] -= backProp.convLayer1Kernel8Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[8].depth1[i] -= backProp.convLayer1Kernel9Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[8].depth2[i] -= backProp.convLayer1Kernel9Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[8].depth3[i] -= backProp.convLayer1Kernel9Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[8].depth4[i] -= backProp.convLayer1Kernel9Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[9].depth1[i] -= backProp.convLayer1Kernel10Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[9].depth2[i] -= backProp.convLayer1Kernel10Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[9].depth3[i] -= backProp.convLayer1Kernel10Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[9].depth4[i] -= backProp.convLayer1Kernel10Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[10].depth1[i] -= backProp.convLayer1Kernel11Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[10].depth2[i] -= backProp.convLayer1Kernel11Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[10].depth3[i] -= backProp.convLayer1Kernel11Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[10].depth4[i] -= backProp.convLayer1Kernel11Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[11].depth1[i] -= backProp.convLayer1Kernel12Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[11].depth2[i] -= backProp.convLayer1Kernel12Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[11].depth3[i] -= backProp.convLayer1Kernel12Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[11].depth4[i] -= backProp.convLayer1Kernel12Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[12].depth1[i] -= backProp.convLayer1Kernel13Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[12].depth2[i] -= backProp.convLayer1Kernel13Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[12].depth3[i] -= backProp.convLayer1Kernel13Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[12].depth4[i] -= backProp.convLayer1Kernel13Depth4_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[13].depth1[i] -= backProp.convLayer1Kernel14Depth1_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[13].depth2[i] -= backProp.convLayer1Kernel14Depth2_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[13].depth3[i] -= backProp.convLayer1Kernel14Depth3_adapted_rate[i];
-                        predictorGui.convStructs[0].convLayer1Kernel1[13].depth4[i] -= backProp.convLayer1Kernel14Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[0].depth1[i] -= backProp.convLayer1Kernel1Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[0].depth2[i] -= backProp.convLayer1Kernel1Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[0].depth3[i] -= backProp.convLayer1Kernel1Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[0].depth4[i] -= backProp.convLayer1Kernel1Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[1].depth1[i] -= backProp.convLayer1Kernel2Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[1].depth2[i] -= backProp.convLayer1Kernel2Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[1].depth3[i] -= backProp.convLayer1Kernel2Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[1].depth4[i] -= backProp.convLayer1Kernel2Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[2].depth1[i] -= backProp.convLayer1Kernel3Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[2].depth2[i] -= backProp.convLayer1Kernel3Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[2].depth3[i] -= backProp.convLayer1Kernel3Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[2].depth4[i] -= backProp.convLayer1Kernel3Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[3].depth1[i] -= backProp.convLayer1Kernel4Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[3].depth2[i] -= backProp.convLayer1Kernel4Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[3].depth3[i] -= backProp.convLayer1Kernel4Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[3].depth4[i] -= backProp.convLayer1Kernel4Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[4].depth1[i] -= backProp.convLayer1Kernel5Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[4].depth2[i] -= backProp.convLayer1Kernel5Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[4].depth3[i] -= backProp.convLayer1Kernel5Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[4].depth4[i] -= backProp.convLayer1Kernel5Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[5].depth1[i] -= backProp.convLayer1Kernel6Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[5].depth2[i] -= backProp.convLayer1Kernel6Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[5].depth3[i] -= backProp.convLayer1Kernel6Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[5].depth4[i] -= backProp.convLayer1Kernel6Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[6].depth1[i] -= backProp.convLayer1Kernel7Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[6].depth2[i] -= backProp.convLayer1Kernel7Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[6].depth3[i] -= backProp.convLayer1Kernel7Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[6].depth4[i] -= backProp.convLayer1Kernel7Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[7].depth1[i] -= backProp.convLayer1Kernel8Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[7].depth2[i] -= backProp.convLayer1Kernel8Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[7].depth3[i] -= backProp.convLayer1Kernel8Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[7].depth4[i] -= backProp.convLayer1Kernel8Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[8].depth1[i] -= backProp.convLayer1Kernel9Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[8].depth2[i] -= backProp.convLayer1Kernel9Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[8].depth3[i] -= backProp.convLayer1Kernel9Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[8].depth4[i] -= backProp.convLayer1Kernel9Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[9].depth1[i] -= backProp.convLayer1Kernel10Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[9].depth2[i] -= backProp.convLayer1Kernel10Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[9].depth3[i] -= backProp.convLayer1Kernel10Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[9].depth4[i] -= backProp.convLayer1Kernel10Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[10].depth1[i] -= backProp.convLayer1Kernel11Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[10].depth2[i] -= backProp.convLayer1Kernel11Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[10].depth3[i] -= backProp.convLayer1Kernel11Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[10].depth4[i] -= backProp.convLayer1Kernel11Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[11].depth1[i] -= backProp.convLayer1Kernel12Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[11].depth2[i] -= backProp.convLayer1Kernel12Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[11].depth3[i] -= backProp.convLayer1Kernel12Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[11].depth4[i] -= backProp.convLayer1Kernel12Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[12].depth1[i] -= backProp.convLayer1Kernel13Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[12].depth2[i] -= backProp.convLayer1Kernel13Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[12].depth3[i] -= backProp.convLayer1Kernel13Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[12].depth4[i] -= backProp.convLayer1Kernel13Depth4_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[13].depth1[i] -= backProp.convLayer1Kernel14Depth1_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[13].depth2[i] -= backProp.convLayer1Kernel14Depth2_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[13].depth3[i] -= backProp.convLayer1Kernel14Depth3_adapted_rate[i];
+                        predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[13].depth4[i] -= backProp.convLayer1Kernel14Depth4_adapted_rate[i];
                     }
                     miniBatchIdx = 0;
                     prevAvgCrossEntropyPerBatch = avgCrossEntropyPerBatch;
                     avgCrossEntropyPerBatch = 0;
                 }
+            }
+            if(trainingActivated == true)
+            {
                 dataInputCtrl.RunWorkerAsync();
             }
         }
@@ -2127,7 +2315,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 192; i++)
                 {
-                    output.WriteLine(mlpStructs[0].secondLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].secondLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2137,7 +2325,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 96000; i++)
                 {
-                    output.WriteLine(mlpStructs[0].firstLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].firstLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2147,7 +2335,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -2157,7 +2345,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(mlpStructs[0].mlpLayer1Bias[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].mlpLayer1Bias[i].ToString());
                 }
                 output.Close();
             }
@@ -2170,8 +2358,8 @@ namespace Predictor
 
                 for (int i = 0; i < 900; i++)
                 {
-                    output.WriteLine(transStructs[0].affineTransWeights1[i].ToString());
-                    output2.WriteLine(transStructs[0].affineTransWeights2[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].affineTransWeights1[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].affineTransWeights2[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2201,17 +2389,17 @@ namespace Predictor
 
                 for(int i = 0; i < 75; i++)
                 {
-                    output.WriteLine(transStructs[0].queryLinearLayerWeights_head1[i].ToString());
-                    output2.WriteLine(transStructs[0].keyLinearLayerWeights_head1[i].ToString());
-                    output3.WriteLine(transStructs[0].valueLinearLayerWeights_head1[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                    output3.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                    output4.WriteLine(transStructs[0].queryLinearLayerWeights_head2[i].ToString());
-                    output5.WriteLine(transStructs[0].keyLinearLayerWeights_head2[i].ToString());
-                    output6.WriteLine(transStructs[0].valueLinearLayerWeights_head2[i].ToString());
+                    output4.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                    output5.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                    output6.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                    output7.WriteLine(transStructs[0].queryLinearLayerWeights_head3[i].ToString());
-                    output8.WriteLine(transStructs[0].keyLinearLayerWeights_head3[i].ToString());
-                    output9.WriteLine(transStructs[0].valueLinearLayerWeights_head3[i].ToString());
+                    output7.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                    output8.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                    output9.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2229,7 +2417,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    output.WriteLine(transStructs[0].transPReLUBias[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transPReLUBias[i].ToString());
                 }
                 output.Close();
             }
@@ -2239,7 +2427,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 6000; i++)
                 {
-                    output.WriteLine(transStructs[0].transPReLUParam[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transPReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -2249,7 +2437,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for(int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].transMLPSecondLayerBias[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transMLPSecondLayerBias[i].ToString());
                 }
                 output.Close();
             }
@@ -2265,10 +2453,10 @@ namespace Predictor
                 StreamWriter output4 = File.AppendText(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].addAndNorm1Gamma[i].ToString());
-                    output2.WriteLine(transStructs[0].addAndNorm1Beta[i].ToString());
-                    output3.WriteLine(transStructs[0].addAndNorm2Gamma[i].ToString());
-                    output4.WriteLine(transStructs[0].addAndNorm2Beta[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].addAndNorm1Gamma[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].addAndNorm1Beta[i].ToString());
+                    output3.WriteLine(networkArray[0].transStructs[0].addAndNorm2Gamma[i].ToString());
+                    output4.WriteLine(networkArray[0].transStructs[0].addAndNorm2Beta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2281,7 +2469,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                 for(int i = 0; i < 225; i++)
                 {
-                    output.WriteLine(transStructs[0].finalLinearLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].finalLinearLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -2299,11 +2487,11 @@ namespace Predictor
                 StreamWriter output5 = File.AppendText(@"X:\convLayerBias5FlatFile.txt");
                 for(int i = 0; i < 1400; i++)
                 {
-                    output.WriteLine(predictorGui.convStructs[0].convLayer1Bias[i].ToString());
-                    output2.WriteLine(predictorGui.convStructs[0].convLayer2Bias[i].ToString());
-                    output3.WriteLine(predictorGui.convStructs[0].convLayer3Bias[i].ToString());
-                    output4.WriteLine(predictorGui.convStructs[0].convLayer4Bias[i].ToString());
-                    output5.WriteLine(predictorGui.convStructs[0].convLayer5Bias[i].ToString());
+                    output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Bias[i].ToString());
+                    output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Bias[i].ToString());
+                    output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Bias[i].ToString());
+                    output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Bias[i].ToString());
+                    output5.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Bias[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2329,13 +2517,13 @@ namespace Predictor
                 StreamWriter output7 = File.AppendText(@"X:\convLayerNormBetaFlatFile.txt");
                 for (int i = 0; i < 1400; i++)
                 {
-                    output.WriteLine(predictorGui.convStructs[0].convLayer1PReLUParam[i].ToString());
-                    output2.WriteLine(predictorGui.convStructs[0].convLayer2PReLUParam[i].ToString());
-                    output3.WriteLine(predictorGui.convStructs[0].convLayer3PReLUParam[i].ToString());
-                    output4.WriteLine(predictorGui.convStructs[0].convLayer4PReLUParam[i].ToString());
-                    output5.WriteLine(predictorGui.convStructs[0].convLayer5PReLUParam[i].ToString());
-                    output6.WriteLine(predictorGui.convStructs[0].convLayer5OutputNormGamma[i].ToString());
-                    output7.WriteLine(predictorGui.convStructs[0].convLayer5OutputNormBeta[i].ToString());
+                    output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1PReLUParam[i].ToString());
+                    output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2PReLUParam[i].ToString());
+                    output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3PReLUParam[i].ToString());
+                    output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4PReLUParam[i].ToString());
+                    output5.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5PReLUParam[i].ToString());
+                    output6.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormGamma[i].ToString());
+                    output7.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormBeta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -2360,10 +2548,10 @@ namespace Predictor
                     StreamWriter output4 = File.AppendText(@"X:\convLayer1Kernel" + (i + 1).ToString() + "_depth4FlatFile.txt");
                     for (int j = 0; j < 32; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth2[j].ToString());
-                        output3.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth3[j].ToString());
-                        output4.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth4[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth2[j].ToString());
+                        output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth3[j].ToString());
+                        output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth4[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2378,8 +2566,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer2Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer2Kernel2[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer2Kernel2[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2392,8 +2580,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer3Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer3Kernel3[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer3Kernel3[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2406,8 +2594,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer4Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer4Kernel4[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer4Kernel4[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2420,8 +2608,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer5Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer5Kernel5[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer5Kernel5[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -2499,27 +2687,27 @@ namespace Predictor
                         bitmapRowIdx++;
                         bitmapColIdx = 0;
                     }
-                    if (transStructs[0].attention_filter_head1[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head1[i] != 0.0)
                     {
-                        temp = Convert.ToInt32(transStructs[0].attention_filter_head1[i] * 255.0);
+                        temp = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head1[i] * 255.0);
                     }
                     else
                     {
                         temp = 0;
                     }
                     filter1Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
-                    if (transStructs[0].attention_filter_head2[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head2[i] != 0.0)
                     {
-                        temp2 = Convert.ToInt32(transStructs[0].attention_filter_head2[i] * 255.0);
+                        temp2 = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head2[i] * 255.0);
                     }
                     else
                     {
                         temp2 = 0;
                     }
                     filter2Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp2, temp2, temp2));
-                    if (transStructs[0].attention_filter_head3[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head3[i] != 0.0)
                     {
-                        temp3 = Convert.ToInt32(transStructs[0].attention_filter_head3[i] * 255.0);
+                        temp3 = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head3[i] * 255.0);
                     }
                     else
                     {
@@ -2538,27 +2726,27 @@ namespace Predictor
                         bitmapRowIdx++;
                         bitmapColIdx = 0;
                     }
-                    if (transStructs[0].attention_filter_head1[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head1[i] != 0.0)
                     {
-                        temp = Convert.ToInt32(transStructs[0].attention_filter_head1[i] * 255.0);
+                        temp = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head1[i] * 255.0);
                     }
                     else
                     {
                         temp = 0;
                     }
                     filter1Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
-                    if (transStructs[0].attention_filter_head2[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head2[i] != 0.0)
                     {
-                        temp2 = Convert.ToInt32(transStructs[0].attention_filter_head2[i] * 255.0);
+                        temp2 = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head2[i] * 255.0);
                     }
                     else
                     {
                         temp2 = 0;
                     }
                     filter2Graphic.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp2, temp2, temp2));
-                    if (transStructs[0].attention_filter_head3[i] != 0.0)
+                    if (networkArray[0].transStructs[0].attention_filter_head3[i] != 0.0)
                     {
-                        temp3 = Convert.ToInt32(transStructs[0].attention_filter_head3[i] * 255.0);
+                        temp3 = Convert.ToInt32(networkArray[0].transStructs[0].attention_filter_head3[i] * 255.0);
                     }
                     else
                     {
@@ -2625,7 +2813,7 @@ namespace Predictor
             Bitmap convLayer5Feature14Graphic = new Bitmap(100, 1);
             Bitmap convLayer5Feature15Graphic = new Bitmap(100, 1);
 
-            transformerInputMat = matOps.transposeMat(transStructs[0].transformerInput, 15, 100);
+            transformerInputMat = matOps.transposeMat(networkArray[0].transStructs[0].transformerInput, 15, 100);
 
             for(int i = 0; i < 100; i++)
             {
@@ -2997,13 +3185,13 @@ namespace Predictor
                     bitmapRowIdx++;
                     bitmapColIdx = 0;
                 }
-                if(transStructs[0].positionalEncodingArray[i] < 0)
+                if(networkArray[0].transStructs[0].positionalEncodingArray[i] < 0)
                 {
                     tempDecimal = 0;
                 }
                 else
                 {
-                    tempDecimal = transStructs[0].positionalEncodingArray[i];
+                    tempDecimal = networkArray[0].transStructs[0].positionalEncodingArray[i];
                 }
                 temp = Convert.ToInt32(tempDecimal * 255.0);
                 posEncodingImage.SetPixel(bitmapColIdx, bitmapRowIdx, Color.FromArgb(temp, temp, temp));
@@ -3097,7 +3285,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpSecondLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 192; i++)
                 {
-                    output.WriteLine(mlpStructs[0].secondLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].secondLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3107,7 +3295,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 96000; i++)
                 {
-                    output.WriteLine(mlpStructs[0].firstLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].firstLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3117,7 +3305,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerPReLUParamsFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].mlpLayer1PReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -3127,7 +3315,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\mlpFirstLayerBiasFlatFile.txt");
                 for (int i = 0; i < 64; i++)
                 {
-                    output.WriteLine(mlpStructs[0].mlpLayer1Bias[i].ToString());
+                    output.WriteLine(networkArray[0].mlpStructs[0].mlpLayer1Bias[i].ToString());
                 }
                 output.Close();
             }
@@ -3141,8 +3329,8 @@ namespace Predictor
 
                 for (int i = 0; i < 900; i++)
                 {
-                    output.WriteLine(transStructs[0].affineTransWeights1[i].ToString());
-                    output2.WriteLine(transStructs[0].affineTransWeights2[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].affineTransWeights1[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].affineTransWeights2[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3172,17 +3360,17 @@ namespace Predictor
 
                 for (int i = 0; i < 75; i++)
                 {
-                    output.WriteLine(transStructs[0].queryLinearLayerWeights_head1[i].ToString());
-                    output2.WriteLine(transStructs[0].keyLinearLayerWeights_head1[i].ToString());
-                    output3.WriteLine(transStructs[0].valueLinearLayerWeights_head1[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head1[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head1[i].ToString());
+                    output3.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head1[i].ToString());
 
-                    output4.WriteLine(transStructs[0].queryLinearLayerWeights_head2[i].ToString());
-                    output5.WriteLine(transStructs[0].keyLinearLayerWeights_head2[i].ToString());
-                    output6.WriteLine(transStructs[0].valueLinearLayerWeights_head2[i].ToString());
+                    output4.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head2[i].ToString());
+                    output5.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head2[i].ToString());
+                    output6.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head2[i].ToString());
 
-                    output7.WriteLine(transStructs[0].queryLinearLayerWeights_head3[i].ToString());
-                    output8.WriteLine(transStructs[0].keyLinearLayerWeights_head3[i].ToString());
-                    output9.WriteLine(transStructs[0].valueLinearLayerWeights_head3[i].ToString());
+                    output7.WriteLine(networkArray[0].transStructs[0].queryLinearLayerWeights_head3[i].ToString());
+                    output8.WriteLine(networkArray[0].transStructs[0].keyLinearLayerWeights_head3[i].ToString());
+                    output9.WriteLine(networkArray[0].transStructs[0].valueLinearLayerWeights_head3[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3200,7 +3388,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].transPReLUBias[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transPReLUBias[i].ToString());
                 }
                 output.Close();
             }
@@ -3210,7 +3398,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPPreluParamFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].transPReLUParam[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transPReLUParam[i].ToString());
                 }
                 output.Close();
             }
@@ -3220,7 +3408,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\affineMLPSecondLayerBiasesFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].transMLPSecondLayerBias[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].transMLPSecondLayerBias[i].ToString());
                 }
                 output.Close();
             }
@@ -3236,10 +3424,10 @@ namespace Predictor
                 StreamWriter output4 = File.AppendText(@"X:\addAndNorm2BetaFlatFile.txt");
                 for (int i = 0; i < 1500; i++)
                 {
-                    output.WriteLine(transStructs[0].addAndNorm1Gamma[i].ToString());
-                    output2.WriteLine(transStructs[0].addAndNorm1Beta[i].ToString());
-                    output3.WriteLine(transStructs[0].addAndNorm2Gamma[i].ToString());
-                    output4.WriteLine(transStructs[0].addAndNorm2Beta[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].addAndNorm1Gamma[i].ToString());
+                    output2.WriteLine(networkArray[0].transStructs[0].addAndNorm1Beta[i].ToString());
+                    output3.WriteLine(networkArray[0].transStructs[0].addAndNorm2Gamma[i].ToString());
+                    output4.WriteLine(networkArray[0].transStructs[0].addAndNorm2Beta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3252,7 +3440,7 @@ namespace Predictor
                 StreamWriter output = File.AppendText(@"X:\finalLinearLayerWeightsFlatFile.txt");
                 for (int i = 0; i < 225; i++)
                 {
-                    output.WriteLine(transStructs[0].finalLinearLayerWeights[i].ToString());
+                    output.WriteLine(networkArray[0].transStructs[0].finalLinearLayerWeights[i].ToString());
                 }
                 output.Close();
             }
@@ -3270,11 +3458,11 @@ namespace Predictor
                 StreamWriter output5 = File.AppendText(@"X:\convLayerBias5FlatFile.txt");
                 for (int i = 0; i < 1400; i++)
                 {
-                    output.WriteLine(predictorGui.convStructs[0].convLayer1Bias[i].ToString());
-                    output2.WriteLine(predictorGui.convStructs[0].convLayer2Bias[i].ToString());
-                    output3.WriteLine(predictorGui.convStructs[0].convLayer3Bias[i].ToString());
-                    output4.WriteLine(predictorGui.convStructs[0].convLayer4Bias[i].ToString());
-                    output5.WriteLine(predictorGui.convStructs[0].convLayer5Bias[i].ToString());
+                    output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Bias[i].ToString());
+                    output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Bias[i].ToString());
+                    output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Bias[i].ToString());
+                    output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Bias[i].ToString());
+                    output5.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Bias[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3300,13 +3488,13 @@ namespace Predictor
                 StreamWriter output7 = File.AppendText(@"X:\convLayerNormBetaFlatFile.txt");
                 for (int i = 0; i < 1400; i++)
                 {
-                    output.WriteLine(predictorGui.convStructs[0].convLayer1PReLUParam[i].ToString());
-                    output2.WriteLine(predictorGui.convStructs[0].convLayer2PReLUParam[i].ToString());
-                    output3.WriteLine(predictorGui.convStructs[0].convLayer3PReLUParam[i].ToString());
-                    output4.WriteLine(predictorGui.convStructs[0].convLayer4PReLUParam[i].ToString());
-                    output5.WriteLine(predictorGui.convStructs[0].convLayer5PReLUParam[i].ToString());
-                    output6.WriteLine(predictorGui.convStructs[0].convLayer5OutputNormGamma[i].ToString());
-                    output7.WriteLine(predictorGui.convStructs[0].convLayer5OutputNormBeta[i].ToString());
+                    output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1PReLUParam[i].ToString());
+                    output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2PReLUParam[i].ToString());
+                    output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3PReLUParam[i].ToString());
+                    output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4PReLUParam[i].ToString());
+                    output5.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5PReLUParam[i].ToString());
+                    output6.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormGamma[i].ToString());
+                    output7.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5OutputNormBeta[i].ToString());
                 }
                 output.Close();
                 output2.Close();
@@ -3331,10 +3519,10 @@ namespace Predictor
                     StreamWriter output4 = File.AppendText(@"X:\convLayer1Kernel" + (i + 1).ToString() + "_depth4FlatFile.txt");
                     for (int j = 0; j < 32; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth2[j].ToString());
-                        output3.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth3[j].ToString());
-                        output4.WriteLine(predictorGui.convStructs[0].convLayer1Kernel1[i].depth4[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth2[j].ToString());
+                        output3.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth3[j].ToString());
+                        output4.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer1Kernel1[i].depth4[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -3349,8 +3537,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer2Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer2Kernel2[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer2Kernel2[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -3363,8 +3551,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer3Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer3Kernel3[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer3Kernel3[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -3377,8 +3565,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer4Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer4Kernel4[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer4Kernel4[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -3391,8 +3579,8 @@ namespace Predictor
                     StreamWriter output2 = File.AppendText(@"X:\convLayer5Kernel" + (i + 1).ToString() + "_depth2FlatFile.txt");
                     for (int j = 0; j < 14; j++)
                     {
-                        output.WriteLine(predictorGui.convStructs[0].convLayer5Kernel5[i].depth1[j].ToString());
-                        output2.WriteLine(predictorGui.convStructs[0].convLayer5Kernel5[i].depth2[j].ToString());
+                        output.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[i].depth1[j].ToString());
+                        output2.WriteLine(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[i].depth2[j].ToString());
                     }
                     output.Close();
                     output2.Close();
@@ -3400,7 +3588,7 @@ namespace Predictor
             }
         }
 
-        public void norm_inputs_resp_to_input_mean_and_std()
+        public void norm_inputs_resp_to_input_mean_and_std(int idx)
         {
             double meanOfPrices = 0;
             double meanOfSizes = 0;
@@ -3409,16 +3597,16 @@ namespace Predictor
 
             for (int i = 0; i < 3200; i++)
             {
-                meanOfPrices += tensorIn.price[i];
-                meanOfSizes += tensorIn.size[i];
+                meanOfPrices += tensorIn[idx].price[i];
+                meanOfSizes += tensorIn[idx].size[i];
             }
             meanOfPrices /= 3200;
             meanOfSizes /= 3200;
 
             for(int i = 0; i < 3200; i++)
             {
-                stdPrices += Math.Pow(tensorIn.price[i] - meanOfPrices, 2);
-                stdSizes += Math.Pow(tensorIn.size[i] - meanOfSizes, 2);
+                stdPrices += Math.Pow(tensorIn[idx].price[i] - meanOfPrices, 2);
+                stdSizes += Math.Pow(tensorIn[idx].size[i] - meanOfSizes, 2);
             }
             stdPrices /= 3200;
             stdSizes /= 3200;
@@ -3428,12 +3616,12 @@ namespace Predictor
 
             for(int i = 0; i < 3200; i++)
             {
-                tensorIn.price[i] = (tensorIn.price[i] - meanOfPrices) / stdPrices;
-                tensorIn.size[i] = (tensorIn.size[i] - meanOfSizes) / stdSizes;
+                tensorIn[idx].price[i] = (tensorIn[idx].price[i] - meanOfPrices) / stdPrices;
+                tensorIn[idx].size[i] = (tensorIn[idx].size[i] - meanOfSizes) / stdSizes;
             }
         }
 
-        public void norm_inputs_resp_to_prev_day_mean_and_std()
+        public void norm_inputs_resp_to_prev_day_mean_and_std(int idx)
         {
             double meanOfPrices = 0;
             double meanOfSizes = 0;
@@ -3475,11 +3663,19 @@ namespace Predictor
 
             for (int i = 0; i < 3200; i++)
             {
-                tensorIn.price[i] = (tensorIn.price[i] - meanOfPrices) / stdPrices;
-                tensorIn.size[i] = (tensorIn.size[i] - meanOfSizes) / stdSizes;
+                tensorIn[idx].price[i] = (tensorIn[idx].price[i] - meanOfPrices) / stdPrices;
+                tensorIn[idx].size[i] = (tensorIn[idx].size[i] - meanOfSizes) / stdSizes;
             }
 
             //further normalization to bring down scales of widely varying examples
+            if (globalScaledMaxPrice == 0 && buildTrdata.Checked == false)
+            {
+                string[] scalingVals = File.ReadAllLines(@"X:\min_max_scaling_values.txt");
+                globalScaledMaxPrice = Convert.ToDouble(scalingVals[0]);
+                globalScaledMinPrice = Convert.ToDouble(scalingVals[1]);
+                globalScaledMaxSize = Convert.ToDouble(scalingVals[2]);
+                globalScaledMinSize = Convert.ToDouble(scalingVals[3]);
+            }
             double minPrice = globalScaledMinPrice;
             double maxPrice = globalScaledMaxPrice;
             double minSize = globalScaledMinSize;
@@ -3487,8 +3683,8 @@ namespace Predictor
 
             for (int i = 0; i < 3200; i++)
             {
-                tensorIn.price[i] = (tensorIn.price[i] - minPrice) / (maxPrice - minPrice);
-                tensorIn.size[i] = (tensorIn.size[i] - minSize) / (maxSize - minSize);
+                tensorIn[idx].price[i] = (tensorIn[idx].price[i] - minPrice) / (maxPrice - minPrice);
+                tensorIn[idx].size[i] = (tensorIn[idx].size[i] - minSize) / (maxSize - minSize);
             }
         }
 
@@ -3940,77 +4136,77 @@ namespace Predictor
             {
                 for (int i = 0; i < 3200; i++)
                 {
-                    layerActivationsOutput.Text += tensorIn.price[i].ToString() + ' ' + tensorIn.size[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += tensorIn[minibatchExSelectVal].price[i].ToString() + ' ' + tensorIn[minibatchExSelectVal].size[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "mlpLayer1")
             {
                 for(int i = 0; i < 64; i++)
                 {
-                    layerActivationsOutput.Text += mlpStructs[0].firstLayerOut[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].mlpStructs[0].firstLayerOut[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "mlpLayer2")
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    layerActivationsOutput.Text += mlpStructs[0].secondLayerOutRaw[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].mlpStructs[0].secondLayerOutRaw[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "TransformerBlock1Output")
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    layerActivationsOutput.Text += transStructs[minibatchExSelectVal].transformerBlock1Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].transStructs[minibatchExSelectVal].transformerBlock1Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "TransformerBlock2Output")
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    layerActivationsOutput.Text += transStructs[minibatchExSelectVal].transformerBlock2Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].transStructs[minibatchExSelectVal].transformerBlock2Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 1")
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].convLayer1Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].convLayer1Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 2")
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].convLayer2Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].convLayer2Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 3")
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].convLayer3Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].convLayer3Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 4")
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].convLayer4Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].convLayer4Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "convolutional layer 5")
             {
                 for (int i = 0; i < 1400; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].convLayer5Output[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].convLayer5Output[i].ToString() + "\r\n";
                 }
             }
             else if (selectedLayer.Text == "Temporally Encoded Feature Map")
             {
                 for (int i = 0; i < 1500; i++)
                 {
-                    layerActivationsOutput.Text += convStructs[minibatchExSelectVal].temporalEncodedNormOutput[i].ToString() + "\r\n";
+                    layerActivationsOutput.Text += networkArray[0].convStructs[minibatchExSelectVal].temporalEncodedNormOutput[i].ToString() + "\r\n";
                 }
             }
         }

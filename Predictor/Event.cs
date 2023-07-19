@@ -21,4 +21,15 @@ namespace Predictor
         public double[] prices = new double[32];
         public double[] sizes = new double[32];
     }
+
+    public class EventArray
+    {
+        public Event[] eventsArray = new Event[predictorGui.numEvents + 1]; //adding causal padding at first event element
+    }
+
+    public class ExampleArray
+    {
+        public string[] inputLines = new string[predictorGui.numEvents * 32];
+        public double[] actualOutcomes = new double[3];
+    }
 }

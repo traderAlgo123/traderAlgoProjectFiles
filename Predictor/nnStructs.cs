@@ -16,6 +16,12 @@ using System.Threading.Tasks;
 
 namespace Predictor
 {
+    public class nnStructsArray
+    {
+        public nnConvStructs[] convStructs = new nnConvStructs[predictorGui.miniBatchSize];
+        public nnTransStructs[] transStructs = new nnTransStructs[predictorGui.miniBatchSize];
+        public nnMLPStructs[] mlpStructs = new nnMLPStructs[predictorGui.miniBatchSize];
+    }
     public class nnConvStructs
     {
         public double[] mean = new double[14];
@@ -180,6 +186,9 @@ namespace Predictor
         public double[] secondLayerOutRaw = new double[3];
 
         public double[] dropout_mask = new double[64];
+
+        public double[] actualOutcomes = new double[3];
+        public double cross_entropy_loss_per_example = 0;
     }
 
     public class nnConvStructsBackProp

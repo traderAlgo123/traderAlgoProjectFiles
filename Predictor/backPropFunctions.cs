@@ -21,66 +21,66 @@ namespace Predictor
     {
         public static void makeTransformer1InputsCopy()
         {
-            Array.Copy(predictorGui.transStructs[0].positionalEncodingArray, 0, predictorGui.transStructs[0].positionalEncodingArrayCpy, 0, 1500);
-            Array.Copy(predictorGui.transStructs[0].inputFromConvModule, 0, predictorGui.transStructs[0].inputFromConvModuleCpy, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].positionalEncodingArray, 0, predictorGui.networkArray[0].transStructs[0].positionalEncodingArrayCpy, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].inputFromConvModule, 0, predictorGui.networkArray[0].transStructs[0].inputFromConvModuleCpy, 0, 1500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head1, 0, predictorGui.transStructs[0].query_head1Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head1, 0, predictorGui.transStructs[0].key_head1Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head1, 0, predictorGui.transStructs[0].value_head1Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head1, 0, predictorGui.networkArray[0].transStructs[0].query_head1Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head1, 0, predictorGui.networkArray[0].transStructs[0].key_head1Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head1, 0, predictorGui.networkArray[0].transStructs[0].value_head1Cpy, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head2, 0, predictorGui.transStructs[0].query_head2Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head2, 0, predictorGui.transStructs[0].key_head2Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head2, 0, predictorGui.transStructs[0].value_head2Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head2, 0, predictorGui.networkArray[0].transStructs[0].query_head2Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head2, 0, predictorGui.networkArray[0].transStructs[0].key_head2Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head2, 0, predictorGui.networkArray[0].transStructs[0].value_head2Cpy, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head3, 0, predictorGui.transStructs[0].query_head3Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head3, 0, predictorGui.transStructs[0].key_head3Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head3, 0, predictorGui.transStructs[0].value_head3Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head3, 0, predictorGui.networkArray[0].transStructs[0].query_head3Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head3, 0, predictorGui.networkArray[0].transStructs[0].key_head3Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head3, 0, predictorGui.networkArray[0].transStructs[0].value_head3Cpy, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head1, 0, predictorGui.transStructs[0].filtered_value_head1Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head2, 0, predictorGui.transStructs[0].filtered_value_head2Cpy, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head3, 0, predictorGui.transStructs[0].filtered_value_head3Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head1, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head1Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head2, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head2Cpy, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head3, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head3Cpy, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head1, 0, predictorGui.transStructs[0].attention_filter_head1Cpy, 0, 10000);
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head2, 0, predictorGui.transStructs[0].attention_filter_head2Cpy, 0, 10000);
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head3, 0, predictorGui.transStructs[0].attention_filter_head3Cpy, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head1, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head1Cpy, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head2, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head2Cpy, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head3, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head3Cpy, 0, 10000);
 
-            Array.Copy(predictorGui.transStructs[0].finalAttentionBlockOutput, 0, predictorGui.transStructs[0].finalAttentionBlockOutputCpy, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].finalAttentionBlockOutput, 0, predictorGui.networkArray[0].transStructs[0].finalAttentionBlockOutputCpy, 0, 1500);
         }
         public static void reloadTransformer1Inputs()
         {
             double[] temp;
             matrixOps matOps = new matrixOps();
 
-            Array.Copy(predictorGui.transStructs[0].positionalEncodingArrayCpy, 0, predictorGui.transStructs[0].positionalEncodingArray, 0, 1500);
-            Array.Copy(predictorGui.transStructs[0].inputFromConvModuleCpy, 0, predictorGui.transStructs[0].inputFromConvModule, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].positionalEncodingArrayCpy, 0, predictorGui.networkArray[0].transStructs[0].positionalEncodingArray, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].inputFromConvModuleCpy, 0, predictorGui.networkArray[0].transStructs[0].inputFromConvModule, 0, 1500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head1Cpy, 0, predictorGui.transStructs[0].query_head1, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head1Cpy, 0, predictorGui.transStructs[0].key_head1, 0, 500);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].key_head1, 100, 5);
-            Array.Copy(temp, 0, predictorGui.transStructs[0].key_head1, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head1Cpy, 0, predictorGui.transStructs[0].value_head1, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head1Cpy, 0, predictorGui.networkArray[0].transStructs[0].query_head1, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head1Cpy, 0, predictorGui.networkArray[0].transStructs[0].key_head1, 0, 500);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].key_head1, 100, 5);
+            Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].key_head1, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head1Cpy, 0, predictorGui.networkArray[0].transStructs[0].value_head1, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head2Cpy, 0, predictorGui.transStructs[0].query_head2, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head2Cpy, 0, predictorGui.transStructs[0].key_head2, 0, 500);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].key_head2, 100, 5);
-            Array.Copy(temp, 0, predictorGui.transStructs[0].key_head2, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head2Cpy, 0, predictorGui.transStructs[0].value_head2, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head2Cpy, 0, predictorGui.networkArray[0].transStructs[0].query_head2, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head2Cpy, 0, predictorGui.networkArray[0].transStructs[0].key_head2, 0, 500);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].key_head2, 100, 5);
+            Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].key_head2, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head2Cpy, 0, predictorGui.networkArray[0].transStructs[0].value_head2, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].query_head3Cpy, 0, predictorGui.transStructs[0].query_head3, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].key_head3Cpy, 0, predictorGui.transStructs[0].key_head3, 0, 500);
-            temp = matOps.transposeMat(predictorGui.transStructs[0].key_head3, 100, 5);
-            Array.Copy(temp, 0, predictorGui.transStructs[0].key_head3, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].value_head3Cpy, 0, predictorGui.transStructs[0].value_head3, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].query_head3Cpy, 0, predictorGui.networkArray[0].transStructs[0].query_head3, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].key_head3Cpy, 0, predictorGui.networkArray[0].transStructs[0].key_head3, 0, 500);
+            temp = matOps.transposeMat(predictorGui.networkArray[0].transStructs[0].key_head3, 100, 5);
+            Array.Copy(temp, 0, predictorGui.networkArray[0].transStructs[0].key_head3, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].value_head3Cpy, 0, predictorGui.networkArray[0].transStructs[0].value_head3, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head1Cpy, 0, predictorGui.transStructs[0].filtered_value_head1, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head2Cpy, 0, predictorGui.transStructs[0].filtered_value_head2, 0, 500);
-            Array.Copy(predictorGui.transStructs[0].filtered_value_head3Cpy, 0, predictorGui.transStructs[0].filtered_value_head3, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head1Cpy, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head1, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head2Cpy, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head2, 0, 500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].filtered_value_head3Cpy, 0, predictorGui.networkArray[0].transStructs[0].filtered_value_head3, 0, 500);
 
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head1Cpy, 0, predictorGui.transStructs[0].attention_filter_head1, 0, 10000);
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head2Cpy, 0, predictorGui.transStructs[0].attention_filter_head2, 0, 10000);
-            Array.Copy(predictorGui.transStructs[0].attention_filter_head3Cpy, 0, predictorGui.transStructs[0].attention_filter_head3, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head1Cpy, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head1, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head2Cpy, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head2, 0, 10000);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].attention_filter_head3Cpy, 0, predictorGui.networkArray[0].transStructs[0].attention_filter_head3, 0, 10000);
 
-            Array.Copy(predictorGui.transStructs[0].finalAttentionBlockOutputCpy, 0, predictorGui.transStructs[0].finalAttentionBlockOutput, 0, 1500);
+            Array.Copy(predictorGui.networkArray[0].transStructs[0].finalAttentionBlockOutputCpy, 0, predictorGui.networkArray[0].transStructs[0].finalAttentionBlockOutput, 0, 1500);
         }
         public double[] ranger_optimizer(double[] gradient, string layer, int blockNum, int vecListIdx)
         {

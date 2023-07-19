@@ -63,6 +63,24 @@ namespace Predictor
             return temp_array;
         }
 
+        public double[] matrixMulCpuSlow(double[] inArray1, double[] inArray2, int M, int K, int N)
+        {
+            double[] temp_array = new double[M * N];
+            for(int row = 0; row < M; row++)
+            {
+                for (int col = 0; col < N; col++)
+                {
+                    double tmp = 0;
+                    for (int i = 0; i < K; i++)
+                    {
+                        tmp += inArray1[row * K + i] * inArray2[i * N + col];
+                    }
+                    temp_array[row * N + col] = tmp;
+                }
+            }
+            return temp_array;
+        }
+
         public double[] transposeMat(double[] inArray, int M, int K)
         {
             double[] result;
@@ -97,6 +115,28 @@ namespace Predictor
                 });
             });
             return result;
+        }
+
+        public double[] convolutionLayer1OnlyCpu(double[] pricesBlock, double[] sizesBlock, double[] pricesKernel, double[] sizesKernel,
+                                              double[] pricesBlock2, double[] sizesBlock2, double[] pricesKernel2, double[] sizesKernel2, int N)
+        {
+            double[] resVal = new double[N];
+            for(int i = 0; i < N; i++)
+            {
+                resVal[i] = (pricesBlock[i] * pricesKernel[i]) + (sizesBlock[i] * sizesKernel[i]) + (pricesBlock2[i] *
+                    pricesKernel2[i]) + (sizesBlock2[i] * sizesKernel2[i]);
+            }
+            return resVal;
+        }
+
+        public double[] convolutionLayer2thru5Cpu(double[] featuresBlock, double[] featuresKernel, double[] featuresBlock2, double[] featuresKernel2, int N)
+        {
+            double[] resVal = new double[N];
+            for (int i = 0; i < N; i++)
+            {
+                resVal[i] = (featuresBlock[i] * featuresKernel[i]) + (featuresBlock2[i] * featuresKernel2[i]);
+            }
+            return resVal;
         }
 
         public double[] conv5KernelBackProp(double[] prevConvLayerOut, double[] derivative, int startIdx, bool depth1)
@@ -317,8 +357,8 @@ namespace Predictor
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    Array.Copy(predictorGui.convStructs[0].convLayer5Kernel5[kernel_idx].depth1, 0, k_F, idx, 14);
-                    Array.Copy(predictorGui.convStructs[0].convLayer5Kernel5[kernel_idx].depth2, 0, k_F2, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[kernel_idx].depth1, 0, k_F, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer5Kernel5[kernel_idx].depth2, 0, k_F2, idx, 14);
                     idx += 14;
                 }
             }
@@ -481,8 +521,8 @@ namespace Predictor
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    Array.Copy(predictorGui.convStructs[0].convLayer4Kernel4[kernel_idx].depth1, 0, k_F, idx, 14);
-                    Array.Copy(predictorGui.convStructs[0].convLayer4Kernel4[kernel_idx].depth2, 0, k_F2, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[kernel_idx].depth1, 0, k_F, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer4Kernel4[kernel_idx].depth2, 0, k_F2, idx, 14);
                     idx += 14;
                 }
             }
@@ -645,8 +685,8 @@ namespace Predictor
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    Array.Copy(predictorGui.convStructs[0].convLayer3Kernel3[kernel_idx].depth1, 0, k_F, idx, 14);
-                    Array.Copy(predictorGui.convStructs[0].convLayer3Kernel3[kernel_idx].depth2, 0, k_F2, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[kernel_idx].depth1, 0, k_F, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer3Kernel3[kernel_idx].depth2, 0, k_F2, idx, 14);
                     idx += 14;
                 }
             }
@@ -718,8 +758,8 @@ namespace Predictor
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    Array.Copy(predictorGui.convStructs[0].convLayer2Kernel2[kernel_idx].depth1, 0, k_F, idx, 14);
-                    Array.Copy(predictorGui.convStructs[0].convLayer2Kernel2[kernel_idx].depth2, 0, k_F2, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[kernel_idx].depth1, 0, k_F, idx, 14);
+                    Array.Copy(predictorGui.networkArray[0].convStructs[0].convLayer2Kernel2[kernel_idx].depth2, 0, k_F2, idx, 14);
                     idx += 14;
                 }
             }
