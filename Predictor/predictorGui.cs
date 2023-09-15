@@ -101,6 +101,8 @@ namespace Predictor
 
         public static nnStructsArray[] networkArray = new nnStructsArray[miniBatchSize];
 
+        public static double[] avg_cross_ent_losses_pop = new double[miniBatchSize];
+
         public static ArrayList entireDaysPrices = new ArrayList();
         public static ArrayList entireDaysSizes = new ArrayList();
 
@@ -222,6 +224,9 @@ namespace Predictor
                 mlp.mlpLayerBiases_init1_GA(i);
                 mlp.mlpLayerPReLUParams_init1_GA(i);
             }//);
+
+            //initialize the arrays for the chromosomes for the genetic algorithm
+            //nnChromosomeWeights.initializeChromosomes(); //Possibly don't need to do this, instead create chromosomes dynamically during reproduction
 
             //display the available devices being used by the predictor
             int cudaDevID = selectGpu;
@@ -837,14 +842,20 @@ namespace Predictor
 
                 predictorGui1.label1.Text = "Outputting cross entropy losses.\n";
                 StreamWriter output = File.AppendText(@"X:\cross_entropy_losses_for_all_networks.txt");
+                StreamWriter output2 = File.AppendText(@"X:\cross_entropy_losses_averages_for_population.txt");
                 for (int i = 0; i < 32; i++)
                 {
+                    double temp = 0;
                     for (int j = 0; j < 32; j++)
                     {
+                        temp += networkArray[i].mlpStructs[j].cross_entropy_loss_per_example;
                         output.WriteLine(networkArray[i].mlpStructs[j].cross_entropy_loss_per_example.ToString());
                     }
+                    avg_cross_ent_losses_pop[i] = temp / 32;
+                    output2.WriteLine(avg_cross_ent_losses_pop[i].ToString());
                 }
                 output.Close();
+                output2.Close();
             }
             else
             {

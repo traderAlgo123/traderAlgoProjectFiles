@@ -168,7 +168,7 @@ namespace Data_Scraper
 
             if (this.Equals(algoGui_array[0]))
             {
-                this.Location = Screen.AllScreens[1].WorkingArea.Location;
+                this.Location = Screen.AllScreens[0].WorkingArea.Location;
                 algoGui_array[0].Height = bids_asks_height + 160;
                 algoGui_array[0].Width = bids_asks_width + 80;
                 algoGui_array[0].Top += 184;
@@ -178,7 +178,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[1]))
             {
-                this.Location = Screen.AllScreens[1].WorkingArea.Location;
+                this.Location = Screen.AllScreens[0].WorkingArea.Location;
                 algoGui_array[1].Height = bids_asks_height + 160;
                 algoGui_array[1].Width = bids_asks_width + 80;
                 algoGui_array[1].Left += 1320;
@@ -188,7 +188,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[2]))
             {
-                this.Location = Screen.AllScreens[1].WorkingArea.Location;
+                this.Location = Screen.AllScreens[0].WorkingArea.Location;
                 algoGui_array[2].Height = bids_asks_height + 364;
                 algoGui_array[2].Width = bids_asks_width + 170;
                 algoGui_array[2].Left += 1576;
@@ -200,7 +200,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[3]))
             {
-                this.Location = Screen.AllScreens[1].WorkingArea.Location;
+                this.Location = Screen.AllScreens[0].WorkingArea.Location;
                 algoGui_array[3].Height = bids_asks_height;
                 algoGui_array[3].Width = bids_asks_width + 100;
                 algoGui_array[3].Top += 348;
@@ -223,7 +223,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[5]))
             {
-                this.Location = Screen.AllScreens[0].WorkingArea.Location;
+                this.Location = Screen.AllScreens[2].WorkingArea.Location;
                 Top += 315;
                 Left += 545;
                 SetWindowPos(algoGui_array[5].Handle, HWND_TOPMOST, 0, 0, 0, 0, TOPMOST_FLAGS);

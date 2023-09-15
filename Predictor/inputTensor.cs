@@ -28,11 +28,19 @@ namespace Predictor
         public double[] depth2 = new double[32];
         public double[] depth3 = new double[32];
         public double[] depth4 = new double[32];
+
+        //public nnChromosomeWeights[] depth1_chromo = new nnChromosomeWeights[32];
+        //public nnChromosomeWeights[] depth2_chromo = new nnChromosomeWeights[32];
+        //public nnChromosomeWeights[] depth3_chromo = new nnChromosomeWeights[32];
+        //public nnChromosomeWeights[] depth4_chromo = new nnChromosomeWeights[32];
     }
 
     public class hiddenTensorKernel
     {
         public double[] depth1 = new double[14];
         public double[] depth2 = new double[14];
+
+        //public nnChromosomeWeights[] depth1_chromo = new nnChromosomeWeights[14];
+        //public nnChromosomeWeights[] depth2_chromo = new nnChromosomeWeights[14];
     }
 }
