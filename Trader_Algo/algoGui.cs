@@ -124,7 +124,7 @@ namespace Data_Scraper
 
         public static string ipaddress1 = "192.168.1.215";
         public static string ipaddress2 = "192.168.1.121";
-        public static string ipaddress3 = "192.168.1.224";
+        public static string ipaddress3 = "192.168.1.206";
 
         public static ProcessStartInfo predictorProcess = new ProcessStartInfo("Predictor.exe");
         public static readonly HttpClient pingClient = new HttpClient();
@@ -168,7 +168,7 @@ namespace Data_Scraper
 
             if (this.Equals(algoGui_array[0]))
             {
-                this.Location = Screen.AllScreens[0].WorkingArea.Location;
+                this.Location = Screen.AllScreens[1].WorkingArea.Location;
                 algoGui_array[0].Height = bids_asks_height + 160;
                 algoGui_array[0].Width = bids_asks_width + 80;
                 algoGui_array[0].Top += 184;
@@ -178,7 +178,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[1]))
             {
-                this.Location = Screen.AllScreens[0].WorkingArea.Location;
+                this.Location = Screen.AllScreens[1].WorkingArea.Location;
                 algoGui_array[1].Height = bids_asks_height + 160;
                 algoGui_array[1].Width = bids_asks_width + 80;
                 algoGui_array[1].Left += 1320;
@@ -188,7 +188,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[2]))
             {
-                this.Location = Screen.AllScreens[0].WorkingArea.Location;
+                this.Location = Screen.AllScreens[1].WorkingArea.Location;
                 algoGui_array[2].Height = bids_asks_height + 364;
                 algoGui_array[2].Width = bids_asks_width + 170;
                 algoGui_array[2].Left += 1576;
@@ -200,7 +200,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[3]))
             {
-                this.Location = Screen.AllScreens[0].WorkingArea.Location;
+                this.Location = Screen.AllScreens[1].WorkingArea.Location;
                 algoGui_array[3].Height = bids_asks_height;
                 algoGui_array[3].Width = bids_asks_width + 100;
                 algoGui_array[3].Top += 348;
@@ -223,7 +223,7 @@ namespace Data_Scraper
             }
             if (this.Equals(algoGui_array[5]))
             {
-                this.Location = Screen.AllScreens[2].WorkingArea.Location;
+                this.Location = Screen.AllScreens[0].WorkingArea.Location;
                 Top += 315;
                 Left += 545;
                 SetWindowPos(algoGui_array[5].Handle, HWND_TOPMOST, 0, 0, 0, 0, TOPMOST_FLAGS);
@@ -1476,6 +1476,28 @@ namespace Data_Scraper
                 SendKeys.SendWait("{BKSP}");
                 Thread.Sleep(500);
                 SendKeys.SendWait("AMD");
+                Thread.Sleep(500);
+                SendKeys.SendWait("{ENTER}");
+            }
+            else if (stockSelecter.Text == "PFE")
+            {
+                Thread.Sleep(500);
+                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, cursorPos.X, cursorPos.Y, 0, 0);
+
+                SendKeys.SendWait("{BKSP}");
+                Thread.Sleep(500);
+                SendKeys.SendWait("PFE");
+                Thread.Sleep(500);
+                SendKeys.SendWait("{ENTER}");
+            }
+            else if (stockSelecter.Text == "MCHP")
+            {
+                Thread.Sleep(500);
+                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, cursorPos.X, cursorPos.Y, 0, 0);
+
+                SendKeys.SendWait("{BKSP}");
+                Thread.Sleep(500);
+                SendKeys.SendWait("MCHP");
                 Thread.Sleep(500);
                 SendKeys.SendWait("{ENTER}");
             }

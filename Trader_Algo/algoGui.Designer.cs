@@ -478,7 +478,9 @@ namespace Data_Scraper
             this.stockSelecter.FormattingEnabled = true;
             this.stockSelecter.Items.AddRange(new object[] {
             "NVDA",
-            "AMD"});
+            "AMD",
+            "MCHP",
+            "PFE"});
             this.stockSelecter.Location = new System.Drawing.Point(10, 476);
             this.stockSelecter.Name = "stockSelecter";
             this.stockSelecter.Size = new System.Drawing.Size(118, 21);
